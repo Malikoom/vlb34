@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Entraînements volley</title>
+<style>
+:root{color-scheme:light dark;--bg:#f3f5fb;--card:#fff;--txt:#14203d;--mut:#66708a;--bd:#d9dfee;--navy:#173889;--yel:#edc406;--ok:#1d8f4e;--ko:#c93d3d;--mt:#c27800;--ink:#173889}
+@media(prefers-color-scheme:dark){:root{--bg:#0d1324;--card:#161f38;--txt:#eef1fa;--mut:#9aa5c4;--bd:#2a3557;--ink:#9db6ff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
+header{background:#173889;color:#fff;padding:calc(14px + env(safe-area-inset-top,0)) 16px 14px;border-bottom:4px solid var(--yel)}
+header h1{margin:0;font-size:1.25rem}
+header p{margin:2px 0 0;font-size:.9rem;opacity:.85}
+header button{background:none;border:0;color:var(--yel);font:inherit;padding:0;text-decoration:underline}
+main{max-width:640px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.card.off{opacity:.55}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.top b{font-size:1.05rem}.top span{color:var(--mut)}
+.cnt{margin:6px 0 10px;color:var(--mut);font-size:.9rem}
+.btns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+button{font:inherit;cursor:pointer}
+.btns button{padding:12px 4px;border-radius:10px;border:2px solid var(--bd);background:transparent;color:var(--txt);font-weight:600}
+.btns .present.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.btns .absent.on{background:var(--ko);border-color:var(--ko);color:#fff}
+.btns .match.on{background:var(--mt);border-color:var(--mt);color:#fff}
+:focus-visible{outline:3px solid var(--yel);outline-offset:2px}
+details{margin-top:10px;color:var(--mut);font-size:.9rem}
+.mut{color:var(--mut)}
+.lnk{background:none;border:0;color:var(--ink);text-decoration:underline;padding:8px 0}
+.prim{background:var(--navy);color:#fff;border:0;border-radius:10px;padding:11px 16px;font-weight:600}
+.prim.sec{background:transparent;color:var(--ink);border:2px solid var(--bd)}
+input,select{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--txt);max-width:100%}
+.list button.p{display:block;width:100%;text-align:left;padding:12px;border:0;border-bottom:1px solid var(--bd);background:none;color:var(--txt)}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.row b{flex:1}
+.row label{display:flex;align-items:center;gap:6px;font-size:.9rem}
+.row input[type=checkbox]{width:20px;height:20px}
+.dates{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:#14203d;color:#fff;padding:10px 16px;border-radius:10px;display:none;max-width:90%;z-index:9}
+table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;text-align:left;border-bottom:1px solid var(--bd)}td:last-child,th:last-child{text-align:right}
+</style>
+</head>
+<body>
+<header><h1>Entraînements volley</h1><p id="who"></p></header>
+<main id="app"><p class="mut">Chargement…</p></main>
+<div id="toast" role="status"></div>
+<script>
+// ====== À CONFIGURER ======
+const URL_API = 'https://qbrbqvaebopuqspidzyn.supabase.co';
+const CLE     = 'sb_publishable_o_Ck4lJmtVKC40D5ZDSafA_hNkiV49R';   // clé "anon" ou "publishable" (pas la clé secrète)
+// ==========================
+
+const $ = s => document.querySelector(s);
+const store = {
+  get(k){ try{ return localStorage.getItem(k) }catch(e){ return null } },
+  set(k,v){ try{ localStorage.setItem(k,v) }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k) }catch(e){} }
+};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = d => { const s = new Date(d + 'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}); return s[0].toUpperCase() + s.slice(1); };
+const hh = t => t.replace(':','h').replace(/h00$/,'h');
+const ST = [['present','Présent'],['absent','Absent'],['match','Match']];
+
+let joueurs = [], moi = null, seances = [], code = null, vue = 'joueur';
+
+async function rpc(fn, args){
+  const r = await fetch(`${URL_API}/rest/v1/rpc/${fn}`, {
+    method:'POST', headers:{apikey:CLE,'Content-Type':'application/json'}, body:JSON.stringify(args || {})
+  });
+  const j = await r.json().catch(() => null);
+  if(!r.ok) throw new Error((j && j.message) || 'Erreur réseau');
+  return j;
+}
+function toast(m){ const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 3000); }
+async function run(f){ try{ await f() }catch(e){ toast(e.message) } }
+
+async function init(){
+  try{ joueurs = await rpc('liste_joueurs'); }
+  catch(e){ $('#app').innerHTML = `<div class="card">Impossible de charger les données : ${esc(e.message)}</div>`; return; }
+  moi = store.get('moi');
+  if(!joueurs.some(j => j.id === moi)) moi = null;
+  code = store.get('code');
+  moi ? charger() : choisir();
+}
+
+// ---------- Choix du prénom ----------
+function choisir(){
+  $('#who').textContent = '';
+  $('#app').innerHTML = `<div class="card"><b>Qui es-tu ?</b><p class="mut">Ton choix est mémorisé sur cet appareil.</p>
+    <input id="q" type="search" placeholder="Rechercher ton prénom" autocomplete="off" style="width:100%">
+    <div class="list" id="liste"></div></div>`;
+  const draw = () => {
+    const q = $('#q').value.trim().toLowerCase();
+    $('#liste').innerHTML = joueurs.filter(j => j.prenom.toLowerCase().includes(q))
+      .map(j => `<button class="p" data-id="${j.id}">${esc(j.prenom)}</button>`).join('') || '<p class="mut">Aucun résultat.</p>';
+  };
+  $('#q').oninput = draw; draw();
+  $('#liste').onclick = e => { const id = e.target.dataset.id; if(id){ moi = id; store.set('moi', id); charger(); } };
+}
+
+// ---------- Vue joueur ----------
+async function charger(){
+  vue = 'joueur';
+  const p = joueurs.find(j => j.id === moi);
+  $('#who').innerHTML = `Salut ${esc(p.prenom)} · <button id="chg">changer</button>`;
+  $('#chg').onclick = () => { store.del('moi'); moi = null; choisir(); };
+  await run(async () => { seances = await rpc('seances_liste', {p_joueur: moi, p_jours_arriere: 0}); });
+  dessiner();
+}
+function carte(s){
+  const n = s.nb || {present:0, absent:0, match:0};
+  const note = s.note ? `<p class="mut">${esc(s.note)}</p>` : '';
+  if(s.annulee) return `<div class="card off"><div class="top"><b>${fmt(s.date)}</b><span>${hh(s.debut)}–${hh(s.fin)}</span></div><p class="mut">Séance annulée</p>${note}</div>`;
+  return `<div class="card"><div class="top"><b>${fmt(s.date)}</b><span>${hh(s.debut)}–${hh(s.fin)}</span></div>
+    <div class="cnt">${n.present} présent${n.present > 1 ? 's' : ''}, ${n.absent} absent${n.absent > 1 ? 's' : ''}, ${n.match} match</div>
+    <div class="btns">${ST.map(([k,l]) => `<button class="${k} ${s.moi === k ? 'on' : ''}" data-s="${s.id}" data-k="${k}" aria-pressed="${s.moi === k}">${l}</button>`).join('')}</div>
+    ${s.presents.length ? `<details><summary>Qui vient ?</summary><p>${s.presents.map(esc).join(', ')}</p></details>` : ''}${note}</div>`;
+}
+function dessiner(){
+  $('#app').innerHTML = (seances.length ? seances.map(carte).join('') : '<div class="card mut">Aucune séance programmée pour le moment.</div>')
+    + `<button class="lnk" id="adm">Mode Nico</button>`;
+  $('#adm').onclick = ouvrirAdmin;
+  $('#app').querySelectorAll('.btns button').forEach(b => b.onclick = () => repondre(b.dataset.s, b.dataset.k));
+}
+function repondre(id, k){
+  const s = seances.find(x => x.id === id);
+  const nv = s.moi === k ? '' : k;  // un second appui annule la réponse
+  run(async () => {
+    await rpc('repondre', {p_seance: id, p_joueur: moi, p_statut: nv});
+    seances = await rpc('seances_liste', {p_joueur: moi, p_jours_arriere: 0});
+    dessiner();
+  });
+}
+
+// ---------- Mode Nico ----------
+async function ouvrirAdmin(){
+  if(!code){
+    const c = prompt('Code Nico :'); if(!c) return;
+    try{ await rpc('admin_verifier', {p_code: c}); code = c; store.set('code', c); }
+    catch(e){ toast(e.message); return; }
+  }
+  adminListe();
+}
+const bar = titre => `<button class="lnk" id="ret">← Retour</button><h2>${titre}</h2>`;
+async function adminListe(){
+  vue = 'admin';
+  let l = [];
+  try{ l = await rpc('seances_liste', {p_joueur: null, p_jours_arriere: 21}); }
+  catch(e){ toast(e.message); return; }
+  const auj = new Date().toISOString().slice(0,10);
+  $('#app').innerHTML = bar('Mode Nico') + `
+    <div class="card"><b>Créer les séances</b>
+      <p class="mut">Mardis 12h–14h et jeudis 20h–22h entre deux dates.</p>
+      <div class="dates"><input type="date" id="du" value="${auj}"><input type="date" id="au"></div>
+      <button class="prim" id="gen">Créer les séances</button></div>
+    <button class="prim sec" id="st" style="margin-bottom:12px">Voir l’assiduité</button>
+    ${l.map(s => `<div class="card ${s.annulee ? 'off' : ''}"><div class="top"><b>${fmt(s.date)} · ${hh(s.debut)}</b><span>${s.nb ? s.nb.present : 0} présents</span></div>
+      <p class="mut">${s.annulee ? 'Annulée · ' : ''}${s.nb_venus} venu${s.nb_venus > 1 ? 's' : ''} (saisi)</p>
+      <button class="prim sec" data-d="${s.id}">Ouvrir</button></div>`).join('')}
+    <button class="lnk" id="out">Quitter le mode Nico</button>`;
+  $('#ret').onclick = charger;
+  $('#out').onclick = () => { code = null; store.del('code'); charger(); };
+  $('#st').onclick = adminStats;
+  $('#gen').onclick = () => run(async () => {
+    const du = $('#du').value, au = $('#au').value;
+    if(!du || !au) throw new Error('Choisis deux dates.');
+    const n = await rpc('admin_creer_seances', {p_code: code, p_du: du, p_au: au});
+    toast(`${n} séance(s) créée(s)`); adminListe();
+  });
+  $('#app').querySelectorAll('[data-d]').forEach(b => b.onclick = () => adminDetail(l.find(s => s.id === b.dataset.d)));
+}
+async function adminDetail(s){
+  let d = [];
+  try{ d = await rpc('admin_detail', {p_code: code, p_seance: s.id}); }
+  catch(e){ toast(e.message); return; }
+  $('#app').innerHTML = bar(`${fmt(s.date)} · ${hh(s.debut)}`) + `
+    <div class="card"><div class="dates"><input id="note" placeholder="Note (facultatif)" value="${esc(s.note || '')}">
+      <button class="prim sec" id="ann">${s.annulee ? 'Rétablir la séance' : 'Annuler la séance'}</button></div>
+      <p class="mut">Réponse du joueur, et case cochée s’il est venu.</p>
+      ${d.map(j => `<div class="row"><b>${esc(j.prenom)}</b>
+        <select data-j="${j.id}" aria-label="Réponse de ${esc(j.prenom)}"><option value="">—</option>${ST.map(([k,l]) => `<option value="${k}" ${j.statut === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <label><input type="checkbox" data-v="${j.id}" ${j.venu ? 'checked' : ''}>Venu</label></div>`).join('')}</div>`;
+  $('#ret').onclick = adminListe;
+  $('#ann').onclick = () => run(async () => {
+    await rpc('admin_annuler', {p_code: code, p_seance: s.id, p_annulee: !s.annulee, p_note: $('#note').value || null});
+    adminListe();
+  });
+  $('#app').querySelectorAll('select[data-j]').forEach(e => e.onchange = () => run(async () => {
+    await rpc('admin_set_reponse', {p_code: code, p_seance: s.id, p_joueur: e.dataset.j, p_statut: e.value}); toast('Enregistré');
+  }));
+  $('#app').querySelectorAll('input[data-v]').forEach(e => e.onchange = () => run(async () => {
+    await rpc('admin_set_presence', {p_code: code, p_seance: s.id, p_joueur: e.dataset.v, p_venu: e.checked}); toast('Enregistré');
+  }));
+}
+async function adminStats(){
+  let d = [];
+  try{ d = await rpc('admin_stats', {p_code: code}); }
+  catch(e){ toast(e.message); return; }
+  $('#app').innerHTML = bar('Assiduité') + `<div class="card"><p class="mut">Séances passées dont la présence a été saisie.</p>
+    <table><tr><th>Joueur</th><th>Venu</th></tr>${d.map(j => `<tr><td>${esc(j.prenom)}</td><td>${j.venus} / ${j.total}</td></tr>`).join('')}</table></div>`;
+  $('#ret').onclick = adminListe;
+}
+
+init();
+</script>
+</body>
+</html>
