@@ -4,52 +4,77 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Entraînements volley</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:light dark;--bg:#f3f5fb;--card:#fff;--txt:#14203d;--mut:#66708a;--bd:#d9dfee;--navy:#173889;--yel:#edc406;--ok:#1d8f4e;--ko:#c93d3d;--mt:#c27800;--ink:#173889}
-@media(prefers-color-scheme:dark){:root{--bg:#0d1324;--card:#161f38;--txt:#eef1fa;--mut:#9aa5c4;--bd:#2a3557;--ink:#9db6ff}}
+:root{color-scheme:light dark;--bg:#eef1f8;--card:#fff;--txt:#14203d;--mut:#62708e;--bd:#d6dcec;--navy:#173889;--yel:#edc406;--ok:#1d8f4e;--ko:#c93d3d;--mt:#d97b00;--ps:#6a58c9;--ink:#173889;
+  --f:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;--fd:"Barlow Condensed","Arial Narrow",var(--f)}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1122;--card:#151e37;--txt:#eef1fa;--mut:#9aa5c4;--bd:#2a3557;--ink:#a9bdff}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
-header{background:#173889;color:#fff;padding:calc(14px + env(safe-area-inset-top,0)) 16px 14px;border-bottom:4px solid var(--yel)}
-header h1{margin:0;font-size:1.25rem}
-header p{margin:2px 0 0;font-size:.9rem;opacity:.85}
-header button{background:none;border:0;color:var(--yel);font:inherit;padding:0;text-decoration:underline}
-main{max-width:640px;margin:0 auto;padding:14px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
-.card.off{opacity:.55}
-.top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.top b{font-size:1.05rem}.top span{color:var(--mut)}
-.cnt{margin:6px 0 10px;color:var(--mut);font-size:.9rem}
-.btns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.45 var(--f)}
+header{background:#173889;color:#fff;display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top,0)) 16px 12px;border-bottom:5px solid var(--yel)}
+header img{height:48px;width:48px;object-fit:contain;border-radius:50%;background:#fff}
+header h1{margin:0;font:700 1.6rem/1 var(--fd);letter-spacing:.02em}
+header p{margin:3px 0 0;font-size:.88rem;opacity:.9}
+header button{background:none;border:0;color:var(--yel);font:inherit;padding:0;text-decoration:underline;cursor:pointer}
+main{max-width:640px;margin:0 auto;padding:14px 14px 40px}
+h2{font:700 1.4rem/1.1 var(--fd);margin:6px 0 10px}
+.card{display:grid;grid-template-columns:62px 1fr;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:12px}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+.card.off,.box.off{opacity:.55}
+.date{background:#173889;color:#fff;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 0;line-height:1}
+.date small{font-size:.78rem;opacity:.85}
+.date strong{font:700 2rem/1 var(--fd);color:var(--yel);margin:2px 0}
+.hrs{font:700 1.3rem/1 var(--fd)}
+.cnt{margin:6px 0 10px;color:var(--mut);font-size:.9rem;display:flex;flex-wrap:wrap;gap:4px 12px}
+.cnt b{color:var(--txt)}
 button{font:inherit;cursor:pointer}
-.btns button{padding:12px 4px;border-radius:10px;border:2px solid var(--bd);background:transparent;color:var(--txt);font-weight:600}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btns button,.apero{padding:11px 4px;border-radius:10px;border:2px solid var(--bd);background:transparent;color:var(--txt);font-weight:600}
 .btns .present.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.btns .pas_sur.on{background:var(--ps);border-color:var(--ps);color:#fff}
 .btns .absent.on{background:var(--ko);border-color:var(--ko);color:#fff}
 .btns .match.on{background:var(--mt);border-color:var(--mt);color:#fff}
+.btns .match.call{border-color:var(--yel);background:rgba(237,196,6,.18);animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(237,196,6,0)}50%{box-shadow:0 0 0 6px rgba(237,196,6,.85)}}
+@media(prefers-reduced-motion:reduce){.btns .match.call{animation:none;box-shadow:0 0 0 4px var(--yel)}}
+.alert{margin:0 0 10px;padding:8px 10px;border-radius:10px;background:var(--yel);color:#14203d;font-weight:600;font-size:.92rem}
+.apero{width:100%;margin-top:8px;text-align:left;padding:10px 12px}
+.apero.on{background:var(--yel);border-color:var(--yel);color:#14203d}
 :focus-visible{outline:3px solid var(--yel);outline-offset:2px}
 details{margin-top:10px;color:var(--mut);font-size:.9rem}
+summary{cursor:pointer;color:var(--ink)}
+details p{margin:6px 0 0}
+.inv{display:flex;gap:8px;margin-top:8px}.inv input{flex:1;min-width:0}
+ul.mes{margin:8px 0 0;padding:0;list-style:none;font-size:.9rem}
+.attente{color:var(--mt)}.accepte{color:var(--ok)}.refuse{color:var(--ko)}
 .mut{color:var(--mut)}
 .lnk{background:none;border:0;color:var(--ink);text-decoration:underline;padding:8px 0}
-.prim{background:var(--navy);color:#fff;border:0;border-radius:10px;padding:11px 16px;font-weight:600}
+.prim{background:var(--navy);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600}
 .prim.sec{background:transparent;color:var(--ink);border:2px solid var(--bd)}
 input,select{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--txt);max-width:100%}
 .list button.p{display:block;width:100%;text-align:left;padding:12px;border:0;border-bottom:1px solid var(--bd);background:none;color:var(--txt)}
 .row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)}
-.row b{flex:1}
-.row label{display:flex;align-items:center;gap:6px;font-size:.9rem}
-.row input[type=checkbox]{width:20px;height:20px}
+.row b{flex:1}.row small{font-weight:400}
+label.ck{display:flex;align-items:center;gap:6px;margin:6px 0}
+input[type=checkbox]{width:20px;height:20px}
 .dates{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:#14203d;color:#fff;padding:10px 16px;border-radius:10px;display:none;max-width:90%;z-index:9}
 table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;text-align:left;border-bottom:1px solid var(--bd)}td:last-child,th:last-child{text-align:right}
 </style>
 </head>
 <body>
-<header><h1>Entraînements volley</h1><p id="who"></p></header>
+<header>
+  <img src="logo.jpg" alt="Logo du club" onerror="this.remove()">
+  <div><h1>Entraînements</h1><p id="who"></p></div>
+</header>
 <main id="app"><p class="mut">Chargement…</p></main>
 <div id="toast" role="status"></div>
 <script>
 // ====== À CONFIGURER ======
 const URL_API = 'https://qbrbqvaebopuqspidzyn.supabase.co';
-const CLE     = 'sb_publishable_o_Ck4lJmtVKC40D5ZDSafA_hNkiV49R';   // clé "anon" ou "publishable" (pas la clé secrète)
+const CLE     = 'sb_publishable_o_Ck4lJmtVKC40D5ZDSafA_hNkiV49R';   // clé "anon" ou "publishable" (jamais la clé secrète)
 // ==========================
 
 const $ = s => document.querySelector(s);
@@ -61,9 +86,14 @@ const store = {
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = d => { const s = new Date(d + 'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}); return s[0].toUpperCase() + s.slice(1); };
 const hh = t => t.replace(':','h').replace(/h00$/,'h');
-const ST = [['present','Présent'],['absent','Absent'],['match','Match']];
+const pl = (n, s, p) => `<span><b>${n}</b> ${n > 1 ? p : s}</span>`;
+const bloc = d => { const x = new Date(d + 'T12:00:00'), f = o => x.toLocaleDateString('fr-FR', o);
+  return `<div class="date"><small>${f({weekday:'short'})}</small><strong>${x.getDate()}</strong><small>${f({month:'short'})}</small></div>`; };
+const ST = [['present','Présent'],['pas_sur','Pas sûr(e)'],['absent','Absent'],['match','Match']];
+const EQ = ['Blocklieu','AceCules'];
+const LIB = {attente:'en attente', accepte:'accepté', refuse:'refusé'};
 
-let joueurs = [], moi = null, seances = [], code = null, vue = 'joueur';
+let joueurs = [], moi = null, seances = [], code = null;
 
 async function rpc(fn, args){
   const r = await fetch(`${URL_API}/rest/v1/rpc/${fn}`, {
@@ -78,7 +108,7 @@ async function run(f){ try{ await f() }catch(e){ toast(e.message) } }
 
 async function init(){
   try{ joueurs = await rpc('liste_joueurs'); }
-  catch(e){ $('#app').innerHTML = `<div class="card">Impossible de charger les données : ${esc(e.message)}</div>`; return; }
+  catch(e){ $('#app').innerHTML = `<div class="box">Impossible de charger les données : ${esc(e.message)}</div>`; return; }
   moi = store.get('moi');
   if(!joueurs.some(j => j.id === moi)) moi = null;
   code = store.get('code');
@@ -88,7 +118,7 @@ async function init(){
 // ---------- Choix du prénom ----------
 function choisir(){
   $('#who').textContent = '';
-  $('#app').innerHTML = `<div class="card"><b>Qui es-tu ?</b><p class="mut">Ton choix est mémorisé sur cet appareil.</p>
+  $('#app').innerHTML = `<div class="box"><h2>Qui es-tu ?</h2><p class="mut">Ton choix est mémorisé sur cet appareil.</p>
     <input id="q" type="search" placeholder="Rechercher ton prénom" autocomplete="off" style="width:100%">
     <div class="list" id="liste"></div></div>`;
   const draw = () => {
@@ -101,36 +131,48 @@ function choisir(){
 }
 
 // ---------- Vue joueur ----------
+async function maj(){ seances = await rpc('seances_liste', {p_joueur: moi, p_jours_arriere: 0}); dessiner(); }
 async function charger(){
-  vue = 'joueur';
   const p = joueurs.find(j => j.id === moi);
   $('#who').innerHTML = `Salut ${esc(p.prenom)} · <button id="chg">changer</button>`;
   $('#chg').onclick = () => { store.del('moi'); moi = null; choisir(); };
-  await run(async () => { seances = await rpc('seances_liste', {p_joueur: moi, p_jours_arriere: 0}); });
-  dessiner();
+  await run(maj);
 }
 function carte(s){
-  const n = s.nb || {present:0, absent:0, match:0};
+  const n = s.nb || {present:0, pas_sur:0, absent:0, match:0, apero:0};
   const note = s.note ? `<p class="mut">${esc(s.note)}</p>` : '';
-  if(s.annulee) return `<div class="card off"><div class="top"><b>${fmt(s.date)}</b><span>${hh(s.debut)}–${hh(s.fin)}</span></div><p class="mut">Séance annulée</p>${note}</div>`;
-  return `<div class="card"><div class="top"><b>${fmt(s.date)}</b><span>${hh(s.debut)}–${hh(s.fin)}</span></div>
-    <div class="cnt">${n.present} présent${n.present > 1 ? 's' : ''}, ${n.absent} absent${n.absent > 1 ? 's' : ''}, ${n.match} match</div>
-    <div class="btns">${ST.map(([k,l]) => `<button class="${k} ${s.moi === k ? 'on' : ''}" data-s="${s.id}" data-k="${k}" aria-pressed="${s.moi === k}">${l}</button>`).join('')}</div>
-    ${s.presents.length ? `<details><summary>Qui vient ?</summary><p>${s.presents.map(esc).join(', ')}</p></details>` : ''}${note}</div>`;
+  const hrs = `<div class="hrs">${hh(s.debut)}–${hh(s.fin)}</div>`;
+  if(s.annulee) return `<article class="card off">${bloc(s.date)}<div>${hrs}<p class="mut">Séance annulée</p>${note}</div></article>`;
+  const appel = s.mon_match && s.moi !== 'match';
+  const btns = ST.map(([k,l]) => `<button class="${k} ${s.moi === k ? 'on' : ''} ${k === 'match' && appel ? 'call' : ''}" data-s="${s.id}" data-k="${k}" aria-pressed="${s.moi === k}">${l}</button>`).join('');
+  const apero = s.apero ? `<button class="apero ${s.moi_apero ? 'on' : ''}" data-a="${s.id}" aria-pressed="${s.moi_apero}">🍻 Apéro après la séance${n.apero ? ` (${n.apero})` : ''}</button>` : '';
+  const mes = s.mes_invites.length ? `<ul class="mes">${s.mes_invites.map(i => `<li>${esc(i.prenom)} : <span class="${i.statut}">${LIB[i.statut]}</span></li>`).join('')}</ul>` : '';
+  return `<article class="card">${bloc(s.date)}<div>${hrs}
+    <div class="cnt">${pl(n.present,'présent','présents')}${pl(n.pas_sur,'pas sûr','pas sûrs')}${pl(n.absent,'absent','absents')}${pl(n.match,'match','matchs')}${s.nb_invites ? pl(s.nb_invites,'invité','invités') : ''}</div>
+    ${appel ? '<p class="alert">Tu as un match ce jour-là : pense à répondre « Match ».</p>' : ''}
+    <div class="btns">${btns}</div>${apero}
+    ${s.presents.length ? `<details><summary>Qui vient ?</summary><p>${s.presents.map(esc).join(', ')}</p></details>` : ''}
+    <details><summary>Demander d’inviter quelqu’un</summary>
+      <div class="inv"><input placeholder="Prénom de l’invité" maxlength="40"><button class="prim" data-inv="${s.id}">Envoyer</button></div></details>
+    ${mes}${note}</div></article>`;
 }
 function dessiner(){
-  $('#app').innerHTML = (seances.length ? seances.map(carte).join('') : '<div class="card mut">Aucune séance programmée pour le moment.</div>')
-    + `<button class="lnk" id="adm">Mode Nico</button>`;
+  const A = $('#app');
+  A.innerHTML = (seances.length ? seances.map(carte).join('') : '<div class="box mut">Aucune séance programmée pour le moment.</div>')
+    + '<button class="lnk" id="adm">Mode Nico</button>';
   $('#adm').onclick = ouvrirAdmin;
-  $('#app').querySelectorAll('.btns button').forEach(b => b.onclick = () => repondre(b.dataset.s, b.dataset.k));
-}
-function repondre(id, k){
-  const s = seances.find(x => x.id === id);
-  const nv = s.moi === k ? '' : k;  // un second appui annule la réponse
-  run(async () => {
-    await rpc('repondre', {p_seance: id, p_joueur: moi, p_statut: nv});
-    seances = await rpc('seances_liste', {p_joueur: moi, p_jours_arriere: 0});
-    dessiner();
+  A.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+    const s = seances.find(x => x.id === b.dataset.s);
+    run(async () => { await rpc('repondre', {p_seance: s.id, p_joueur: moi, p_statut: s.moi === b.dataset.k ? '' : b.dataset.k}); await maj(); });
+  });
+  A.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+    const s = seances.find(x => x.id === b.dataset.a);
+    run(async () => { await rpc('repondre_apero', {p_seance: s.id, p_joueur: moi, p_apero: !s.moi_apero}); await maj(); });
+  });
+  A.querySelectorAll('[data-inv]').forEach(b => b.onclick = () => {
+    const p = b.previousElementSibling.value.trim();
+    if(!p) return toast('Entre le prénom de ton invité.');
+    run(async () => { await rpc('demander_invite', {p_seance: b.dataset.inv, p_joueur: moi, p_prenom: p}); toast('Demande envoyée à Nico'); await maj(); });
   });
 }
 
@@ -143,21 +185,21 @@ async function ouvrirAdmin(){
   }
   adminListe();
 }
-const bar = titre => `<button class="lnk" id="ret">← Retour</button><h2>${titre}</h2>`;
+const bar = t => `<button class="lnk" id="ret">← Retour</button><h2>${t}</h2>`;
 async function adminListe(){
-  vue = 'admin';
   let l = [];
   try{ l = await rpc('seances_liste', {p_joueur: null, p_jours_arriere: 21}); }
   catch(e){ toast(e.message); return; }
   const auj = new Date().toISOString().slice(0,10);
   $('#app').innerHTML = bar('Mode Nico') + `
-    <div class="card"><b>Créer les séances</b>
-      <p class="mut">Mardis 12h–14h et jeudis 20h–22h entre deux dates.</p>
+    <div class="box"><b>Créer les séances</b>
+      <p class="mut">Mardis 12h–14h et jeudis 20h–22h entre deux dates. Apéro, matchs et note se règlent ensuite séance par séance.</p>
       <div class="dates"><input type="date" id="du" value="${auj}"><input type="date" id="au"></div>
       <button class="prim" id="gen">Créer les séances</button></div>
     <button class="prim sec" id="st" style="margin-bottom:12px">Voir l’assiduité</button>
-    ${l.map(s => `<div class="card ${s.annulee ? 'off' : ''}"><div class="top"><b>${fmt(s.date)} · ${hh(s.debut)}</b><span>${s.nb ? s.nb.present : 0} présents</span></div>
-      <p class="mut">${s.annulee ? 'Annulée · ' : ''}${s.nb_venus} venu${s.nb_venus > 1 ? 's' : ''} (saisi)</p>
+    ${l.map(s => `<div class="box ${s.annulee ? 'off' : ''}"><div class="row" style="border:0;padding:0"><b>${fmt(s.date)} · ${hh(s.debut)}</b><span>${s.nb ? s.nb.present : 0} présents</span></div>
+      <p class="mut">${[s.annulee ? 'Annulée' : '', s.apero ? '🍻 Apéro' : '', s.equipes_match.length ? 'Match : ' + s.equipes_match.join(', ') : '',
+        s.nb_attente ? `${s.nb_attente} invité${s.nb_attente > 1 ? 's' : ''} à valider` : '', `${s.nb_venus} venu${s.nb_venus > 1 ? 's' : ''} saisi${s.nb_venus > 1 ? 's' : ''}`].filter(Boolean).join(' · ')}</p>
       <button class="prim sec" data-d="${s.id}">Ouvrir</button></div>`).join('')}
     <button class="lnk" id="out">Quitter le mode Nico</button>`;
   $('#ret').onclick = charger;
@@ -172,25 +214,38 @@ async function adminListe(){
   $('#app').querySelectorAll('[data-d]').forEach(b => b.onclick = () => adminDetail(l.find(s => s.id === b.dataset.d)));
 }
 async function adminDetail(s){
-  let d = [];
+  let d;
   try{ d = await rpc('admin_detail', {p_code: code, p_seance: s.id}); }
   catch(e){ toast(e.message); return; }
+  const opt = (v, l, cur) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${l}</option>`;
   $('#app').innerHTML = bar(`${fmt(s.date)} · ${hh(s.debut)}`) + `
-    <div class="card"><div class="dates"><input id="note" placeholder="Note (facultatif)" value="${esc(s.note || '')}">
-      <button class="prim sec" id="ann">${s.annulee ? 'Rétablir la séance' : 'Annuler la séance'}</button></div>
-      <p class="mut">Réponse du joueur, et case cochée s’il est venu.</p>
-      ${d.map(j => `<div class="row"><b>${esc(j.prenom)}</b>
-        <select data-j="${j.id}" aria-label="Réponse de ${esc(j.prenom)}"><option value="">—</option>${ST.map(([k,l]) => `<option value="${k}" ${j.statut === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-        <label><input type="checkbox" data-v="${j.id}" ${j.venu ? 'checked' : ''}>Venu</label></div>`).join('')}</div>`;
-  $('#ret').onclick = adminListe;
-  $('#ann').onclick = () => run(async () => {
-    await rpc('admin_annuler', {p_code: code, p_seance: s.id, p_annulee: !s.annulee, p_note: $('#note').value || null});
+    <div class="box"><input id="note" placeholder="Note (facultatif)" value="${esc(s.note || '')}" style="width:100%">
+      <label class="ck"><input type="checkbox" id="apero" ${s.apero ? 'checked' : ''}>Apéro après la séance</label>
+      ${EQ.map(e => `<label class="ck"><input type="checkbox" data-eq="${e}" ${s.equipes_match.includes(e) ? 'checked' : ''}>Match ${e} ce jour-là</label>`).join('')}
+      <div class="dates"><button class="prim" id="sav">Enregistrer</button>
+      <button class="prim sec" id="ann">${s.annulee ? 'Rétablir la séance' : 'Annuler la séance'}</button></div></div>
+    ${d.invites.length ? `<div class="box"><b>Invités</b>${d.invites.map(i => `<div class="row"><b>${esc(i.prenom)} <small class="mut">via ${esc(i.demandeur)}</small></b>
+      <select data-i="${i.id}" aria-label="Décision pour ${esc(i.prenom)}">${opt('attente','En attente',i.statut)}${opt('accepte','Accepté',i.statut)}${opt('refuse','Refusé',i.statut)}</select></div>`).join('')}</div>` : ''}
+    <div class="box"><p class="mut">Réponse du joueur, et case cochée s’il est venu.</p>
+      ${d.joueurs.map(j => `<div class="row"><b>${esc(j.prenom)}${j.apero ? ' 🍻' : ''}</b>
+        <select data-j="${j.id}" aria-label="Réponse de ${esc(j.prenom)}"><option value="">—</option>${ST.map(([k,l]) => opt(k, l, j.statut)).join('')}</select>
+        <label class="ck" style="margin:0"><input type="checkbox" data-v="${j.id}" ${j.venu ? 'checked' : ''}>Venu</label></div>`).join('')}</div>`;
+  const A = $('#app');
+  const sauver = annulee => run(async () => {
+    await rpc('admin_maj_seance', {p_code: code, p_seance: s.id, p_annulee: annulee, p_note: $('#note').value,
+      p_apero: $('#apero').checked, p_equipes: [...A.querySelectorAll('[data-eq]')].filter(c => c.checked).map(c => c.dataset.eq)});
     adminListe();
   });
-  $('#app').querySelectorAll('select[data-j]').forEach(e => e.onchange = () => run(async () => {
+  $('#ret').onclick = adminListe;
+  $('#sav').onclick = () => sauver(s.annulee);
+  $('#ann').onclick = () => sauver(!s.annulee);
+  A.querySelectorAll('select[data-i]').forEach(e => e.onchange = () => run(async () => {
+    await rpc('admin_decider_invite', {p_code: code, p_invite: e.dataset.i, p_statut: e.value}); toast('Enregistré');
+  }));
+  A.querySelectorAll('select[data-j]').forEach(e => e.onchange = () => run(async () => {
     await rpc('admin_set_reponse', {p_code: code, p_seance: s.id, p_joueur: e.dataset.j, p_statut: e.value}); toast('Enregistré');
   }));
-  $('#app').querySelectorAll('input[data-v]').forEach(e => e.onchange = () => run(async () => {
+  A.querySelectorAll('input[data-v]').forEach(e => e.onchange = () => run(async () => {
     await rpc('admin_set_presence', {p_code: code, p_seance: s.id, p_joueur: e.dataset.v, p_venu: e.checked}); toast('Enregistré');
   }));
 }
@@ -198,7 +253,7 @@ async function adminStats(){
   let d = [];
   try{ d = await rpc('admin_stats', {p_code: code}); }
   catch(e){ toast(e.message); return; }
-  $('#app').innerHTML = bar('Assiduité') + `<div class="card"><p class="mut">Séances passées dont la présence a été saisie.</p>
+  $('#app').innerHTML = bar('Assiduité') + `<div class="box"><p class="mut">Séances passées dont la présence a été saisie.</p>
     <table><tr><th>Joueur</th><th>Venu</th></tr>${d.map(j => `<tr><td>${esc(j.prenom)}</td><td>${j.venus} / ${j.total}</td></tr>`).join('')}</table></div>`;
   $('#ret').onclick = adminListe;
 }
