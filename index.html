@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Entraînements volley</title>
+<title>Volley Loisir Beaulieu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Condensed:wght@700&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
 @media(prefers-color-scheme:dark){:root{--bg:#0b1122;--card:#151e37;--txt:#eef1fa;--mut:#9aa5c4;--bd:#2a3557;--ink:#a9bdff}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.45 var(--f)}
-header{background:#173889;color:#fff;display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top,0)) 16px 12px;border-bottom:5px solid var(--yel)}
+header{background:#173889;color:#fff;display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top,0)) 16px 12px}
 header img{height:48px;width:48px;object-fit:contain;border-radius:50%;background:#fff}
 header h1{margin:0;font:700 1.6rem/1 var(--fd);letter-spacing:.02em}
 header p{margin:3px 0 0;font-size:.88rem;opacity:.9}
@@ -62,13 +62,32 @@ input[type=checkbox]{width:20px;height:20px}
 .dates{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:#14203d;color:#fff;padding:10px 16px;border-radius:10px;display:none;max-width:90%;z-index:9}
 table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;text-align:left;border-bottom:1px solid var(--bd)}td:last-child,th:last-child{text-align:right}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:#173889;z-index:6}
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;background:#173889;border-bottom:4px solid var(--yel)}
+.tabs button{flex:1;background:none;border:0;color:#fff;opacity:.75;padding:12px 4px 10px;font:700 1.1rem/1 var(--fd);letter-spacing:.04em;text-transform:uppercase}
+.tabs button.on{opacity:1;color:var(--yel);background:rgba(255,255,255,.12)}
+.tabs button.new::after{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--yel);margin-left:6px;vertical-align:super}
+textarea{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--txt);width:100%;margin:8px 0;resize:vertical}
+.actu h3{font:700 1.35rem/1.1 var(--fd);margin:4px 0 6px}
+.actu p{margin:0;white-space:pre-wrap;word-break:break-word}
+.actu.pin{border-left:5px solid var(--yel)}
+.actu a{color:var(--ink)}
+.actu .evt{font-weight:600;margin:0 0 6px}
+.actu.past{opacity:.6}
+.thumb{display:block;width:100%;max-height:190px;object-fit:cover;border-radius:10px;margin-bottom:10px;background:var(--bd)}
+#pv img{display:block;width:100%;max-height:140px;object-fit:cover;border-radius:10px;margin-top:8px}
+a.go{display:inline-block;margin-top:10px;text-decoration:none;color:#fff;max-width:100%;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
 <header>
   <img src="logo.jpg" alt="Logo du club" onerror="this.remove()">
-  <div><h1>Entraînements</h1><p id="who"></p></div>
+  <div><h1>Volley Loisir Beaulieu</h1><p id="who"></p></div>
 </header>
+<nav class="tabs" role="tablist">
+  <button role="tab" data-t="entr" class="on" aria-selected="true">Entraînements</button>
+  <button role="tab" data-t="actus" aria-selected="false">Actus</button>
+</nav>
 <main id="app"><p class="mut">Chargement…</p></main>
 <div id="toast" role="status"></div>
 <script>
@@ -113,6 +132,7 @@ async function init(){
   if(!joueurs.some(j => j.id === moi)) moi = null;
   code = store.get('code');
   moi ? charger() : choisir();
+  chargerActus();
 }
 
 // ---------- Choix du prénom ----------
@@ -177,14 +197,13 @@ function dessiner(){
 }
 
 // ---------- Mode Nico ----------
-async function ouvrirAdmin(){
-  if(!code){
-    const c = prompt('Code Nico :'); if(!c) return;
-    try{ await rpc('admin_verifier', {p_code: c}); code = c; store.set('code', c); }
-    catch(e){ toast(e.message); return; }
-  }
-  adminListe();
+async function demanderCode(){
+  if(code) return true;
+  const c = prompt('Code Nico :'); if(!c) return false;
+  try{ await rpc('admin_verifier', {p_code: c}); code = c; store.set('code', c); return true; }
+  catch(e){ toast(e.message); return false; }
 }
+async function ouvrirAdmin(){ if(await demanderCode()) adminListe(); }
 const bar = t => `<button class="lnk" id="ret">← Retour</button><h2>${t}</h2>`;
 async function adminListe(){
   let l = [];
@@ -256,6 +275,79 @@ async function adminStats(){
   $('#app').innerHTML = bar('Assiduité') + `<div class="box"><p class="mut">Séances passées dont la présence a été saisie.</p>
     <table><tr><th>Joueur</th><th>Venu</th></tr>${d.map(j => `<tr><td>${esc(j.prenom)}</td><td>${j.venus} / ${j.total}</td></tr>`).join('')}</table></div>`;
   $('#ret').onclick = adminListe;
+}
+
+// ---------- Onglets et Actus ----------
+let actus = [], imgApercu = null;
+const lien = t => esc(t).replace(/https?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+const maxA = () => actus.length ? Math.max(...actus.map(a => +new Date(a.created_at))) : 0;
+function pastille(){
+  const actif = document.querySelector('.tabs .on').dataset.t === 'actus';
+  document.querySelector('[data-t=actus]').classList.toggle('new', !actif && maxA() > Number(store.get('actus_vu') || 0));
+}
+async function chargerActus(){ try{ actus = await rpc('actus_liste'); }catch(e){} pastille(); }
+function aller(t){
+  document.querySelectorAll('.tabs button').forEach(b => { const on = b.dataset.t === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  if(t === 'actus') pageActus(); else { moi ? charger() : choisir(); pastille(); }
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => aller(b.dataset.t));
+
+async function apercuLien(){
+  imgApercu = null; $('#pv').innerHTML = '';
+  const u = $('#au').value.trim();
+  if(!/^https?:\/\//i.test(u)) return;
+  toast('Recherche de l’aperçu…');
+  try{
+    const r = await fetch('https://api.microlink.io/?url=' + encodeURIComponent(u));
+    const j = await r.json();
+    if(j.status !== 'success') throw new Error('indisponible');
+    const d = j.data;
+    if(d.title && !$('#at').value.trim()) $('#at').value = d.title.slice(0, 120);
+    if(d.description && !$('#ax').value.trim()) $('#ax').value = d.description.slice(0, 500);
+    imgApercu = d.image && /^https:\/\//i.test(d.image.url || '') ? d.image.url : null;
+    if(imgApercu) $('#pv').innerHTML = `<img src="${esc(imgApercu)}" alt="" onerror="this.remove()">`;
+    toast(imgApercu ? 'Aperçu récupéré' : 'Titre récupéré, pas d’image trouvée');
+  }catch(e){ toast('Aperçu indisponible : saisis le titre à la main.'); }
+}
+async function pageActus(){
+  imgApercu = null;
+  $('#app').innerHTML = '<p class="mut">Chargement…</p>';
+  await chargerActus();
+  store.set('actus_vu', String(maxA())); pastille();
+  const adm = !!code, A = $('#app'), aujd = new Date().toISOString().slice(0, 10);
+  const dom = u => { try{ return new URL(u).hostname.replace(/^www\./, '') }catch(e){ return u } };
+  A.innerHTML = (adm ? `<div class="box"><b>Publier une actu</b>
+      <input id="at" placeholder="Titre (ex. Tournoi mixte de Lunel)" maxlength="120" style="width:100%;margin-top:8px">
+      <input id="au" type="url" inputmode="url" placeholder="Lien https://… (facultatif)" maxlength="500" style="width:100%;margin-top:8px">
+      <p class="mut" style="margin:4px 0 0;font-size:.85rem">L’aperçu (titre, image) se récupère tout seul une fois le lien collé.</p><div id="pv"></div>
+      <label class="mut" for="ad" style="display:block;margin-top:8px">Date de l’événement (facultatif)</label>
+      <input id="ad" type="date">
+      <textarea id="ax" rows="3" maxlength="4000" placeholder="Texte (facultatif)"></textarea>
+      <label class="ck"><input type="checkbox" id="ap">Épingler en haut</label>
+      <button class="prim" id="pub">Publier</button></div>` : '')
+    + (actus.length ? actus.map(a => `<article class="box actu ${a.epingle ? 'pin' : ''} ${a.date_evenement && a.date_evenement < aujd ? 'past' : ''}">
+        ${a.image && a.url && /^https:\/\//i.test(a.image) ? `<a href="${esc(a.url)}" target="_blank" rel="noopener"><img class="thumb" src="${esc(a.image)}" alt="" loading="lazy" onerror="this.parentNode.remove()"></a>` : ''}
+        <small class="mut">${a.epingle ? '📌 ' : ''}Publié le ${new Date(a.created_at).toLocaleDateString('fr-FR', {day:'numeric', month:'long'})}</small>
+        <h3>${esc(a.titre)}</h3>
+        ${a.date_evenement ? `<p class="evt">📅 ${fmt(a.date_evenement)}${a.date_evenement < aujd ? ' · terminé' : ''}</p>` : ''}
+        ${a.texte ? `<p>${lien(a.texte)}</p>` : ''}
+        ${a.url && /^https?:\/\//i.test(a.url) ? `<a class="prim go" href="${esc(a.url)}" target="_blank" rel="noopener">Ouvrir le lien · ${esc(dom(a.url))}</a>` : ''}
+        ${adm ? `<button class="lnk" data-del="${a.id}">Supprimer</button>` : ''}</article>`).join('')
+      : '<div class="box mut">Pas encore d’actu.</div>')
+    + (adm ? '<button class="lnk" id="quit">Quitter le mode Nico</button>' : '<button class="lnk" id="adm2">Mode Nico</button>');
+  if(adm){
+    $('#au').onchange = apercuLien;
+    $('#pub').onclick = () => run(async () => {
+      const titre = $('#at').value.trim(); if(!titre) throw new Error('Il faut un titre.');
+      await rpc('admin_publier_actu', {p_code: code, p_titre: titre, p_texte: $('#ax').value, p_url: $('#au').value.trim() || null, p_date: $('#ad').value || null, p_image: imgApercu, p_epingle: $('#ap').checked});
+      toast('Actu publiée'); pageActus();
+    });
+    A.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+      if(confirm('Supprimer cette actu ?')) run(async () => { await rpc('admin_supprimer_actu', {p_code: code, p_id: b.dataset.del}); pageActus(); });
+    });
+    $('#quit').onclick = () => { code = null; store.del('code'); pageActus(); };
+  } else $('#adm2').onclick = async () => { if(await demanderCode()) pageActus(); };
 }
 
 init();
