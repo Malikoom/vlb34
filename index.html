@@ -33,9 +33,9 @@ button{font:inherit;cursor:pointer}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .btns button,.apero{padding:11px 4px;border-radius:10px;border:2px solid var(--bd);background:transparent;color:var(--txt);font-weight:600}
 .btns .present.on{background:var(--ok);border-color:var(--ok);color:#fff}
-.btns .pas_sur.on{background:var(--ps);border-color:var(--ps);color:#fff}
+.btns .pas_sur.on{background:var(--yel);border-color:var(--yel);color:#14203d}
 .btns .absent.on{background:var(--ko);border-color:var(--ko);color:#fff}
-.btns .match.on{background:var(--mt);border-color:var(--mt);color:#fff}
+.btns .match.on{background:#173889;border-color:var(--yel);color:var(--yel)}
 .btns .match.call{border-color:var(--yel);background:rgba(237,196,6,.18);animation:pulse 1.1s ease-in-out infinite}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(237,196,6,0)}50%{box-shadow:0 0 0 6px rgba(237,196,6,.85)}}
 @media(prefers-reduced-motion:reduce){.btns .match.call{animation:none;box-shadow:0 0 0 4px var(--yel)}}
@@ -77,6 +77,27 @@ textarea{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd)
 .thumb{display:block;width:100%;max-height:190px;object-fit:cover;border-radius:10px;margin-bottom:10px;background:var(--bd)}
 #pv img{display:block;width:100%;max-height:140px;object-fit:cover;border-radius:10px;margin-top:8px}
 a.go{display:inline-block;margin-top:10px;text-decoration:none;color:#fff;max-width:100%;overflow-wrap:anywhere}
+.full{grid-column:1/-1}
+.part h4{font:700 1.05rem/1 var(--fd);letter-spacing:.05em;text-transform:uppercase;margin:6px 0 8px;color:var(--mut)}
+.pl{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.pu{position:relative;display:flex;align-items:center;gap:6px;padding:3px 11px 3px 4px;border-radius:999px;border:1px solid var(--bd);font-size:.92rem}
+.pu i{font-style:normal;font-weight:700;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:.78rem;color:#fff}
+.pu.ok i{background:var(--ok)}.pu.ps i{background:var(--yel);color:#14203d}.pu.ko i{background:var(--ko)}.pu.mt i{background:#173889;color:var(--yel)}
+.pu.mute{opacity:.6}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.aperobox{margin-top:14px;border-radius:14px;overflow:hidden;border:2px solid var(--yel)}
+.ban{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;color:#14203d;font:700 1.35rem/1 var(--fd);letter-spacing:.05em;text-transform:uppercase;background:repeating-linear-gradient(-45deg,#edc406 0 14px,#f7d93f 14px 28px)}
+.apbody{padding:12px}.apbody p{margin:0}
+.ap2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.ap2 button{padding:11px 4px;border-radius:10px;border:2px solid var(--bd);background:transparent;color:var(--txt);font-weight:600}
+.ap2 .oui{background:var(--yel);border-color:var(--yel);color:#14203d}
+.apf{display:flex;gap:8px;margin-top:10px}.apf[hidden]{display:none}.apf input{flex:1;min-width:0}
+.al{list-style:none;margin:0;padding:0}
+.al li{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.al li:last-child{border-bottom:0}
+.al li span{color:var(--mut)}
+.al li.mine{grid-template-columns:1fr}
+.al li.mine input{width:100%}
 </style>
 </head>
 <body>
@@ -158,6 +179,24 @@ async function charger(){
   $('#chg').onclick = () => { store.del('moi'); moi = null; choisir(); };
   await run(maj);
 }
+const IC = {present:['✓','ok','présent'], pas_sur:['?','ps','pas sûr(e)'], absent:['✕','ko','absent'], match:['M','mt','match']};
+const puce = p => { const [c, k, l] = IC[p.statut]; return `<li class="pu ${k} ${p.statut === 'absent' ? 'mute' : ''}"><i aria-hidden="true">${c}</i>${esc(p.prenom)}<span class="sr">, ${l}</span></li>`; };
+function aperoBloc(s){
+  const L = s.apero_liste;
+  let corps;
+  if(!s.moi_apero){
+    corps = `<p>Tu restes pour l’apéro ?</p>
+      <div class="ap2"><button class="oui" data-ao="${s.id}">🍻 Je reste</button><button data-an="${s.id}">Pas cette fois</button></div>
+      <div class="apf" hidden><input maxlength="80" placeholder="Tu apportes quoi ? (facultatif)"><button class="prim" data-av="${s.id}">Valider</button></div>`;
+  } else {
+    corps = (L.length ? `<ul class="al">${L.map(x => x.id === moi
+        ? `<li class="mine"><b>${esc(x.prenom)} (toi)</b><input data-ap="${s.id}" value="${esc(x.apporte || '')}" maxlength="80" placeholder="Ce que tu apportes" aria-label="Ce que tu apportes"><button class="lnk" data-ad="${s.id}">Me désinscrire</button></li>`
+        : `<li><b>${esc(x.prenom)}</b><span>${x.apporte ? esc(x.apporte) : '<i>à définir</i>'}</span></li>`).join('')}</ul>`
+      : '<p class="mut">Personne pour l’instant.</p>')
+      + (s.moi_apero === 'non' ? `<p class="mut" style="margin-top:8px">Tu as répondu non. <button class="lnk" data-ar="${s.id}">Finalement, je viens</button></p>` : '');
+  }
+  return `<section class="aperobox"><div class="ban"><span aria-hidden="true">🍻</span>Apéro après la séance<span aria-hidden="true">🎉</span></div><div class="apbody">${corps}</div></section>`;
+}
 function carte(s){
   const n = s.nb || {present:0, pas_sur:0, absent:0, match:0, apero:0};
   const note = s.note ? `<p class="mut">${esc(s.note)}</p>` : '';
@@ -165,31 +204,38 @@ function carte(s){
   if(s.annulee) return `<article class="card off">${bloc(s.date)}<div>${hrs}<p class="mut">Séance annulée</p>${note}</div></article>`;
   const appel = s.mon_match && s.moi !== 'match';
   const btns = ST.map(([k,l]) => `<button class="${k} ${s.moi === k ? 'on' : ''} ${k === 'match' && appel ? 'call' : ''}" data-s="${s.id}" data-k="${k}" aria-pressed="${s.moi === k}">${l}</button>`).join('');
-  const apero = s.apero ? `<button class="apero ${s.moi_apero ? 'on' : ''}" data-a="${s.id}" aria-pressed="${s.moi_apero}">🍻 Apéro après la séance${n.apero ? ` (${n.apero})` : ''}</button>` : '';
   const mes = s.mes_invites.length ? `<ul class="mes">${s.mes_invites.map(i => `<li>${esc(i.prenom)} : <span class="${i.statut}">${LIB[i.statut]}</span></li>`).join('')}</ul>` : '';
   return `<article class="card">${bloc(s.date)}<div>${hrs}
     <div class="cnt">${pl(n.present,'présent','présents')}${pl(n.pas_sur,'pas sûr','pas sûrs')}${pl(n.absent,'absent','absents')}${pl(n.match,'match','matchs')}${s.nb_invites ? pl(s.nb_invites,'invité','invités') : ''}</div>
     ${appel ? '<p class="alert">Tu as un match ce jour-là : pense à répondre « Match ».</p>' : ''}
-    <div class="btns">${btns}</div>${apero}
-    ${s.presents.length ? `<details><summary>Qui vient ?</summary><p>${s.presents.map(esc).join(', ')}</p></details>` : ''}
-    <details><summary>Demander d’inviter quelqu’un</summary>
-      <div class="inv"><input placeholder="Prénom de l’invité" maxlength="40"><button class="prim" data-inv="${s.id}">Envoyer</button></div></details>
-    ${mes}${note}</div></article>`;
+    <div class="btns">${btns}</div></div>
+    <div class="full">
+      <div class="part"><h4>Qui vient ?</h4>${s.participants.length ? `<ul class="pl">${s.participants.map(puce).join('')}</ul>` : '<p class="mut">Personne n’a encore répondu.</p>'}</div>
+      ${s.apero ? aperoBloc(s) : ''}
+      <details><summary>Demander d’inviter quelqu’un</summary>
+        <div class="inv"><input placeholder="Prénom de l’invité" maxlength="40"><button class="prim" data-inv="${s.id}">Envoyer</button></div></details>
+      ${mes}${note}</div></article>`;
 }
 function dessiner(){
   const A = $('#app');
   A.innerHTML = (seances.length ? seances.map(carte).join('') : '<div class="box mut">Aucune séance programmée pour le moment.</div>')
     + '<button class="lnk" id="adm">Mode Nico</button>';
   $('#adm').onclick = ouvrirAdmin;
-  A.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+  const act = (sel, f) => A.querySelectorAll(sel).forEach(b => b.onclick = () => f(b));
+  const ap = (id, choix, apporte) => run(async () => {
+    await rpc('repondre_apero', {p_seance: id, p_joueur: moi, p_choix: choix, p_apporte: apporte || null}); await maj();
+  });
+  act('[data-k]', b => {
     const s = seances.find(x => x.id === b.dataset.s);
     run(async () => { await rpc('repondre', {p_seance: s.id, p_joueur: moi, p_statut: s.moi === b.dataset.k ? '' : b.dataset.k}); await maj(); });
   });
-  A.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
-    const s = seances.find(x => x.id === b.dataset.a);
-    run(async () => { await rpc('repondre_apero', {p_seance: s.id, p_joueur: moi, p_apero: !s.moi_apero}); await maj(); });
-  });
-  A.querySelectorAll('[data-inv]').forEach(b => b.onclick = () => {
+  act('[data-ao]', b => { const f = b.closest('.aperobox').querySelector('.apf'); f.hidden = false; f.querySelector('input').focus(); });
+  act('[data-an]', b => ap(b.dataset.an, 'non'));
+  act('[data-av]', b => ap(b.dataset.av, 'oui', b.previousElementSibling.value.trim()));
+  act('[data-ad]', b => ap(b.dataset.ad, 'non'));
+  act('[data-ar]', b => ap(b.dataset.ar, ''));
+  A.querySelectorAll('[data-ap]').forEach(i => i.onchange = () => ap(i.dataset.ap, 'oui', i.value.trim()));
+  act('[data-inv]', b => {
     const p = b.previousElementSibling.value.trim();
     if(!p) return toast('Entre le prénom de ton invité.');
     run(async () => { await rpc('demander_invite', {p_seance: b.dataset.inv, p_joueur: moi, p_prenom: p}); toast('Demande envoyée à Nico'); await maj(); });
