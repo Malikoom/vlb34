@@ -126,6 +126,33 @@ details.past>summary{cursor:pointer;color:var(--ink);font-weight:600;padding:10p
 .vs ul{list-style:none;margin:0;padding:0;font-size:.92rem;min-height:1.3em}
 .vs li.me{font-weight:700;color:var(--ink)}
 .sz{font-size:.8rem;font-weight:700;margin-bottom:4px}.sz.ok{color:var(--ok)}.sz.warn{color:var(--mt)}
+.court{margin-top:10px;border-radius:12px;overflow:hidden;border:2px solid #fff;box-shadow:0 0 0 1px var(--bd)}
+.court>.ch{background:#173889;color:var(--yel);font:700 1rem/1 var(--fd);letter-spacing:.05em;text-transform:uppercase;padding:7px 12px}
+.cb{display:grid;grid-template-columns:1fr 8px 1fr;background:#2f5fc4}
+.net{width:8px;background:repeating-linear-gradient(0deg,#fff 0 6px,rgba(255,255,255,.35) 6px 10px);box-shadow:0 0 6px rgba(0,0,0,.4)}
+.zone{position:relative;min-height:176px;padding:8px;min-width:0;transition:box-shadow .12s}
+.zone.st{min-height:110px}
+.cb .zone.g{background:linear-gradient(90deg,transparent calc(66% - 1px),rgba(255,255,255,.4) calc(66% - 1px),rgba(255,255,255,.4) 66%,transparent 66%)}
+.cb .zone.d{background:linear-gradient(90deg,transparent calc(33% - 1px),rgba(255,255,255,.4) calc(33% - 1px),rgba(255,255,255,.4) 33%,transparent 33%)}
+.zone.over{box-shadow:inset 0 0 0 3px var(--yel)}
+.zl{display:flex;align-items:center;gap:6px;margin-bottom:6px;color:#fff;font:700 .95rem/1 var(--fd);letter-spacing:.04em}
+.cb .zone.d .zl{justify-content:flex-end}
+.zl b{font:700 .78rem/1 var(--f);padding:2px 7px;border-radius:999px;background:#fff}
+.zl b.ok{color:var(--ok)}.zl b.warn{color:var(--mt)}
+.zc{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.cb .zone.d .zc{align-items:flex-end}
+.zc.row{flex-direction:row;flex-wrap:wrap;align-items:center}
+.chip{display:inline-block;max-width:100%;background:#fff;color:#14203d;border-radius:999px;padding:5px 11px;font-size:.88rem;font-weight:600;overflow-wrap:anywhere;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.35)}
+.chip.k-pas_sur{box-shadow:0 0 0 2px var(--yel)}
+.chip.k-none,.chip.k-absent,.chip.k-match{box-shadow:0 0 0 1px #8a93ab;opacity:.85}
+.chip.sel{box-shadow:0 0 0 3px var(--yel),0 2px 6px rgba(0,0,0,.4);opacity:1}
+.chip.dragging{opacity:.3}
+.chip.ghost{position:fixed;pointer-events:none;z-index:50;transform:translate(-50%,-140%);box-shadow:0 8px 18px rgba(0,0,0,.45);opacity:1}
+.zone.st .chip{cursor:default;touch-action:auto}
+.chip.moi{background:var(--yel)}
+.zone.pool{border:2px dashed var(--bd);border-radius:12px;min-height:56px;background:var(--card);margin-top:6px}
+details.autres{margin-top:10px}
+details.autres>summary{cursor:pointer;color:var(--ink);font-weight:600;padding:6px 0}
 </style>
 </head>
 <body>
@@ -161,7 +188,7 @@ const bloc = d => { const x = new Date(d + 'T12:00:00'), f = o => x.toLocaleDate
 const ST = [['present','Présent'],['pas_sur','Pas sûr(e)'],['absent','Absent'],['match','Match']];
 const EQ = ['Blocklieu','AceCules'];
 const LIB = {attente:'en attente', accepte:'accepté', refuse:'refusé'};
-const ajd = () => new Date().toLocaleDateString('sv-SE');   // date locale AAAA-MM-JJ
+const ajd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };   // date locale AAAA-MM-JJ
 const svg = p => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const ICO = {
   lock: svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
@@ -231,13 +258,13 @@ function groupes(s){
   if(!g.length) return '<p class="mut">Personne n’a encore répondu.</p>';
   return `<div class="grp">${g.map(x => `<div class="gr ${x.cl} ${x.k === 'absent' ? 'mute' : ''}"><div class="gi" aria-hidden="true"><b>${x.c}</b><small>${x.L.length}</small></div><span class="sr">${x.l} : </span><ul>${x.L.map(p => `<li>${esc(p.prenom)}</li>`).join('')}</ul></div>`).join('')}</div>`;
 }
-function terrainsHtml(eq, C, me, cnt){
+function terrainsHtml(eq, C, me){
   let h = '';
   for(let t = 0; t < C; t++){
     const a = eq[2*t] || [], b = eq[2*t + 1] || [];
-    if(!cnt && !a.length && !b.length) continue;
-    const col = L => `<div>${cnt ? `<div class="sz ${L.length >= 4 && L.length <= 6 ? 'ok' : 'warn'}">${L.length} joueur${L.length > 1 ? 's' : ''}</div>` : ''}<ul>${L.map(n => `<li class="${n === me ? 'me' : ''}">${esc(n)}</li>`).join('')}</ul></div>`;
-    h += `<div class="ter"><b>Terrain ${t + 1}</b><div class="vs">${col(a)}<i>VS</i>${col(b)}</div></div>`;
+    if(!a.length && !b.length) continue;
+    const z = (L, cls, lab) => `<div class="zone st ${cls}"><div class="zl"><span>${lab}</span></div><div class="zc">${L.map(n => `<span class="chip ${n === me ? 'moi' : ''}">${esc(n)}</span>`).join('')}</div></div>`;
+    h += `<div class="court"><div class="ch">Terrain ${t + 1}</div><div class="cb">${z(a, 'g', 'A')}<div class="net" title="Filet"></div>${z(b, 'd', 'B')}</div></div>`;
   }
   return h;
 }
@@ -373,34 +400,77 @@ async function adminEquipes(s){
   d.joueurs.filter(j => j.statut === 'pas_sur').forEach(j => lst.push({n: j.prenom, k: 'pas_sur'}));
   d.joueurs.filter(j => j.statut !== 'present' && j.statut !== 'pas_sur').forEach(j => lst.push({n: j.prenom, k: j.statut || 'none'}));
   const aff = lst.map(x => compo ? compo.equipes.findIndex(L => L.includes(x.n)) : -1);
-  const LK = {pas_sur:'pas sûr(e)', absent:'absent(e)', match:'match', none:'sans réponse'};
-  const calc = () => { const eq = Array.from({length: 2 * C}, () => []); lst.forEach((x, i) => { if(aff[i] >= 0 && aff[i] < 2 * C) eq[aff[i]].push(x.n); }); return eq; };
+  let selI = -1, drag = null;
+  const placé = i => aff[i] >= 0 && aff[i] < 2 * C;
+  const calc = () => { const eq = Array.from({length: 2 * C}, () => []); lst.forEach((x, i) => { if(placé(i)) eq[aff[i]].push(x.n); }); return eq; };
   const certains = lst.filter(x => x.k === 'present').length, surs = lst.filter(x => x.k === 'pas_sur').length;
-  function resume(){
-    const nonPl = lst.filter((x, i) => x.k === 'present' && !(aff[i] >= 0 && aff[i] < 2 * C)).length, moy = certains / (2 * C);
+  const chip = i => `<div class="chip k-${lst[i].k} ${selI === i ? 'sel' : ''}" data-i="${i}" role="button" tabindex="0" aria-pressed="${selI === i}">${lst[i].k === 'pas_sur' ? '? ' : ''}${esc(lst[i].n)}</div>`;
+  const zone = (t, cls) => {
+    const L = lst.map((x, i) => i).filter(i => aff[i] === t), ok = L.length >= 4 && L.length <= 6;
+    return `<div class="zone ${cls}" data-t="${t}"><div class="zl"><span>${t % 2 ? 'B' : 'A'}</span><b class="${ok ? 'ok' : 'warn'}">${L.length}</b></div><div class="zc">${L.map(chip).join('')}</div></div>`;
+  };
+  function plateau(){
+    let h = '';
+    for(let k = 0; k < C; k++) h += `<div class="court"><div class="ch">Terrain ${k + 1}</div><div class="cb">${zone(2 * k, 'g')}<div class="net" title="Filet"></div>${zone(2 * k + 1, 'd')}</div></div>`;
+    const libres = lst.map((x, i) => i).filter(i => !placé(i));
+    const hauts = libres.filter(i => lst[i].k === 'present' || lst[i].k === 'pas_sur'), bas = libres.filter(i => !hauts.includes(i));
+    h += `<h3 class="sech">À placer</h3><div class="zone pool" data-t="-1"><div class="zc row">${hauts.map(chip).join('') || '<span class="mut">Tout le monde est placé.</span>'}</div></div>`;
+    if(bas.length) h += `<details class="autres"><summary>Autres joueurs (${bas.length})</summary><div class="zone pool" data-t="-1"><div class="zc row">${bas.map(chip).join('')}</div></div></details>`;
+    return h;
+  }
+  function majPlat(){
+    const nonPl = lst.filter((x, i) => x.k === 'present' && !placé(i)).length, moy = certains / (2 * C);
     const conseil = !certains ? '' : moy < 4 ? ` Peu de joueurs pour ${C} terrain${C > 1 ? 's' : ''} (environ ${moy.toFixed(1)} par équipe).` : moy > 6 ? ` Beaucoup de joueurs pour ${C} terrain${C > 1 ? 's' : ''} (environ ${moy.toFixed(1)} par équipe).` : '';
     $('#hint').textContent = `${certains} présent${certains > 1 ? 's' : ''} (+${surs} pas sûr${surs > 1 ? 's' : ''}), ${nonPl} à placer.${conseil}`;
-    $('#resume').innerHTML = terrainsHtml(calc(), C, null, true);
+    $('#plateau').innerHTML = plateau();
   }
-  const opt = i => `<option value="-1">—</option>` + Array.from({length: 2 * C}, (_, t) => `<option value="${t}" ${aff[i] === t ? 'selected' : ''}>Terrain ${Math.floor(t / 2) + 1} · ${t % 2 ? 'B' : 'A'}</option>`).join('');
-  const ligne = i => `<div class="row"><b>${esc(lst[i].n)}${LK[lst[i].k] ? ` <small class="mut">${LK[lst[i].k]}</small>` : ''}</b><select data-i="${i}" aria-label="Équipe de ${esc(lst[i].n)}">${opt(i)}</select></div>`;
+  const zoneSous = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest('.zone:not(.st)'); };
+  const surligner = z => { document.querySelectorAll('.zone.over').forEach(e => e.classList.remove('over')); if(z) z.classList.add('over'); };
+  const finDrag = () => { if(drag && drag.ghost) drag.ghost.remove(); surligner(null); drag = null; };
   function rendre(){
     aff.forEach((v, i) => { if(v >= 2 * C) aff[i] = -1; });
-    const hauts = lst.map((x, i) => i).filter(i => lst[i].k === 'present' || lst[i].k === 'pas_sur'), bas = lst.map((x, i) => i).filter(i => !hauts.includes(i));
     $('#app').innerHTML = bar(`Équipes · ${fmt(s.date)}`) + `
       <div class="box"><label class="ck">Terrains
         <select id="nt">${[1, 2, 3].map(n => `<option value="${n}" ${n === C ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-        <p class="mut" id="hint"></p><div id="resume"></div></div>
-      <div class="box"><b>Joueurs</b>${hauts.map(ligne).join('')}
-        ${bas.length ? `<details><summary>Autres joueurs (${bas.length})</summary>${bas.map(ligne).join('')}</details>` : ''}</div>
+        <p class="mut" id="hint"></p>
+        <p class="mut" style="margin:0;font-size:.88rem">Fais glisser un joueur dans une moitié de terrain, ou touche-le puis touche la moitié voulue. Pour le retirer, dépose-le dans « À placer ».</p></div>
+      <div id="plateau"></div>
       <div class="acts"><button class="prim ic" id="sv">Enregistrer</button><button class="prim sec" id="cl">Effacer les équipes</button></div>
       <p class="mut">Une fois enregistrées, les équipes sont visibles par les joueurs sur la séance.</p>`;
     $('#ret').onclick = adminListe;
     $('#nt').onchange = e => { C = +e.target.value; rendre(); };
-    $('#app').querySelectorAll('select[data-i]').forEach(e => e.onchange = () => { aff[+e.dataset.i] = +e.value; resume(); });
     $('#sv').onclick = () => run(async () => { await rpc('admin_sauver_equipes', {p_code: code, p_seance: s.id, p_compo: {terrains: C, equipes: calc()}}); toast('Équipes enregistrées'); adminListe(); });
     $('#cl').onclick = () => { if(confirm('Effacer les équipes de cette séance ?')) run(async () => { await rpc('admin_sauver_equipes', {p_code: code, p_seance: s.id, p_compo: null}); adminListe(); }); };
-    resume();
+    const pl = $('#plateau');
+    pl.onpointerdown = e => {
+      const c = e.target.closest('.chip'); if(!c) return;
+      drag = {i: +c.dataset.i, x: e.clientX, y: e.clientY, moved: false, el: c, ghost: null, pid: e.pointerId};
+      try{ c.setPointerCapture(e.pointerId); }catch(err){}
+    };
+    pl.onpointermove = e => {
+      if(!drag || e.pointerId !== drag.pid) return;
+      if(!drag.moved){
+        if(Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+        drag.moved = true; drag.ghost = drag.el.cloneNode(true); drag.ghost.classList.add('ghost'); document.body.appendChild(drag.ghost); drag.el.classList.add('dragging');
+      }
+      drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px';
+      surligner(zoneSous(e.clientX, e.clientY));
+    };
+    pl.onpointerup = e => {
+      if(!drag || e.pointerId !== drag.pid) return;
+      const d = drag, z = d.moved ? zoneSous(e.clientX, e.clientY) : null;
+      finDrag();
+      if(d.moved){ if(z){ aff[d.i] = +z.dataset.t; selI = -1; } else { d.el.classList.remove('dragging'); return; } }
+      else selI = selI === d.i ? -1 : d.i;   // simple tap : (dés)sélection
+      majPlat();
+    };
+    pl.onpointercancel = () => { if(drag){ drag.el.classList.remove('dragging'); finDrag(); } };
+    pl.onclick = e => {   // touche sur une moitié de terrain alors qu'un joueur est sélectionné
+      if(e.target.closest('.chip') || selI < 0) return;
+      const z = e.target.closest('.zone'); if(!z) return;
+      aff[selI] = +z.dataset.t; selI = -1; majPlat();
+    };
+    majPlat();
   }
   rendre();
 }
@@ -414,7 +484,8 @@ async function adminDetail(s){
       <label class="ck"><input type="checkbox" id="apero" ${s.apero ? 'checked' : ''}>Apéro après la séance</label>
       ${EQ.map(e => `<label class="ck"><input type="checkbox" data-eq="${e}" ${s.equipes_match.includes(e) ? 'checked' : ''}>Match ${e} ce jour-là</label>`).join('')}
       <div class="dates"><button class="prim" id="sav">Enregistrer</button>
-      <button class="prim sec" id="ann">${s.annulee ? 'Rétablir la séance' : 'Annuler la séance'}</button></div></div>
+      <button class="prim sec" id="ann">${s.annulee ? 'Rétablir la séance' : 'Annuler la séance'}</button>
+      ${s.date >= ajd() && !s.annulee ? `<button class="prim sec ic" id="eqp">${ICO.users}Équipes</button>` : ''}</div></div>
     ${d.invites.length ? `<div class="box"><b>Invités</b>${d.invites.map(i => `<div class="row"><b>${esc(i.prenom)} <small class="mut">via ${esc(i.demandeur)}</small></b>
       <select data-i="${i.id}" aria-label="Décision pour ${esc(i.prenom)}">${opt('attente','En attente',i.statut)}${opt('accepte','Accepté',i.statut)}${opt('refuse','Refusé',i.statut)}</select></div>`).join('')}</div>` : ''}
     <div class="box"><p class="mut">Réponse du joueur, et case cochée s’il est venu.</p>
@@ -430,6 +501,7 @@ async function adminDetail(s){
   $('#ret').onclick = adminListe;
   $('#sav').onclick = () => sauver(s.annulee);
   $('#ann').onclick = () => sauver(!s.annulee);
+  if($('#eqp')) $('#eqp').onclick = () => adminEquipes(s);
   A.querySelectorAll('select[data-i]').forEach(e => e.onchange = () => run(async () => {
     await rpc('admin_decider_invite', {p_code: code, p_invite: e.dataset.i, p_statut: e.value}); toast('Enregistré');
   }));
