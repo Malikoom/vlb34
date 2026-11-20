@@ -86,6 +86,11 @@ a.go{display:inline-block;margin-top:10px;text-decoration:none;color:#fff;max-wi
 .gi small{font-weight:600;font-size:.78rem;opacity:.9}
 .gr.ok .gi{background:var(--ok)}.gr.ps .gi{background:var(--yel);color:#14203d}.gr.ko .gi{background:var(--ko)}.gr.mt .gi{background:#173889;color:var(--yel)}
 .gr ul{list-style:none;margin:0;padding:9px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;font-size:.95rem}
+.gr{border-width:2px}
+.gr.ok{border-color:var(--ok);background:rgba(29,143,78,.08)}
+.gr.ps{border-color:var(--yel);background:rgba(237,196,6,.12)}
+.gr.mt{border-color:#173889;background:rgba(23,56,137,.08)}
+.gr.ko{border-color:var(--ko);background:rgba(201,61,61,.07)}
 .gr.mute{opacity:.7}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .aperobox{margin-top:14px;border-radius:14px;overflow:hidden;border:2px solid var(--yel)}
@@ -204,7 +209,7 @@ const LIB = {attente:'en attente', accepte:'accepté', refuse:'refusé'};
 const ajd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };   // date locale AAAA-MM-JJ
 const svg = p => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const etat = new Map();   // état ouvert/fermé des accordéons, conservé entre deux affichages
-const acc = (key, titre, resume, corps, defOpen) => `<details class="acc" data-k="${key}" ${(etat.has(key) ? etat.get(key) : defOpen) ? 'open' : ''}><summary><span>${titre}</span><span class="sm">${resume}</span></summary><div class="accb">${corps}</div></details>`;
+const acc = (key, titre, resume, corps, defOpen) => `<details class="acc" data-acc="${key}" ${(etat.has(key) ? etat.get(key) : defOpen) ? 'open' : ''}><summary><span>${titre}</span><span class="sm">${resume}</span></summary><div class="accb">${corps}</div></details>`;
 const ICO = {
   dice: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/>'),
   lock: svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
@@ -306,7 +311,7 @@ function aperoBloc(s){
   }
   if(!s.moi_apero) return `<section class="aperobox"><div class="ban"><span aria-hidden="true">🍻</span>Apéro après la séance<span aria-hidden="true">🎉</span></div><div class="apbody">${corps}</div></section>`;
   const key = 'a:' + s.id, nb = L.length;
-  return `<section class="aperobox"><details data-k="${key}" ${etat.get(key) ? 'open' : ''}><summary class="ban sum"><span>🍻 Apéro après la séance 🎉</span><small>${nb} partant${nb > 1 ? 's' : ''} · ${s.moi_apero === 'oui' ? 'tu viens' : 'tu ne viens pas'}</small></summary><div class="apbody">${corps}</div></details></section>`;
+  return `<section class="aperobox"><details data-acc="${key}" ${etat.get(key) ? 'open' : ''}><summary class="ban sum"><span>🍻 Apéro après la séance 🎉</span><small>${nb} partant${nb > 1 ? 's' : ''} · ${s.moi_apero === 'oui' ? 'tu viens' : 'tu ne viens pas'}</small></summary><div class="apbody">${corps}</div></details></section>`;
 }
 function carte(s){
   const n = s.nb || {present:0, pas_sur:0, absent:0, match:0, apero:0};
@@ -332,13 +337,13 @@ function carte(s){
 function dessiner(){
   const A = $('#app');
   A.innerHTML = (seances.length ? seances.map(carte).join('') : '<div class="box mut">Aucune séance programmée pour le moment.</div>');
-  A.querySelectorAll('details[data-k]').forEach(d => d.ontoggle = () => etat.set(d.dataset.k, d.open));
+  A.querySelectorAll('details[data-acc]').forEach(d => d.ontoggle = () => etat.set(d.dataset.acc, d.open));
   const act = (sel, f) => A.querySelectorAll(sel).forEach(b => b.onclick = () => f(b));
   const ap = (id, choix, apporte) => run(async () => {
     if(choix) etat.set('a:' + id, true);   // reste ouvert après la réponse
     await rpc('repondre_apero', {p_seance: id, p_joueur: moi, p_choix: choix, p_apporte: apporte || null}); await maj();
   });
-  act('[data-k]', b => {
+  act('button[data-k]', b => {
     const s = seances.find(x => x.id === b.dataset.s);
     run(async () => { await rpc('repondre', {p_seance: s.id, p_joueur: moi, p_statut: s.moi === b.dataset.k ? '' : b.dataset.k}); await maj(); });
   });
