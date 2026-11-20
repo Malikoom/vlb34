@@ -173,9 +173,9 @@ const ICO = {
   users: svg('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
   chart: svg('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>')
 };
-function majLock(){ const b = $('#lock'); b.innerHTML = code ? ICO.unlock : ICO.lock; b.setAttribute('aria-label', code ? 'Mode Nico (activé)' : 'Mode Nico'); }
+function majLock(){ const b = $('#lock'); b.innerHTML = modeNico ? ICO.unlock : ICO.lock; b.setAttribute('aria-label', modeNico ? 'Quitter le mode Nico' : 'Entrer en mode Nico'); }
 
-let joueurs = [], moi = null, seances = [], code = null;
+let joueurs = [], moi = null, seances = [], code = null, modeNico = false;
 
 async function rpc(fn, args){
   const r = await fetch(`${URL_API}/rest/v1/rpc/${fn}`, {
@@ -194,7 +194,7 @@ async function init(){
   moi = store.get('moi');
   if(!joueurs.some(j => j.id === moi)) moi = null;
   code = store.get('code');
-  majLock(); $('#lock').onclick = ouvrirAdmin;
+  majLock(); $('#lock').onclick = basculerNico;
   moi ? charger() : choisir();
   chargerActus();
 }
@@ -309,13 +309,19 @@ function dessiner(){
 
 // ---------- Mode Nico ----------
 async function demanderCode(){
-  if(code) return true;
+  if(code){ try{ await rpc('admin_verifier', {p_code: code}); return true; }catch(e){ code = null; store.del('code'); } }
   const c = prompt('Code Nico :'); if(!c) return false;
-  try{ await rpc('admin_verifier', {p_code: c}); code = c; store.set('code', c); majLock(); return true; }
+  try{ await rpc('admin_verifier', {p_code: c}); code = c; store.set('code', c); return true; }
   catch(e){ toast(e.message); return false; }
 }
-async function ouvrirAdmin(){ if(await demanderCode()){ marquerTab('entr'); adminListe(); } }
-const bar = (t, quit) => `<div class="tb"><button class="prim sec ic" id="ret">${ICO.back}Retour</button>${quit ? `<button class="prim sec ic" id="out" aria-label="Quitter le mode Nico">${ICO.out}Quitter</button>` : ''}</div><h2>${t}</h2>`;
+function ongletActif(){ return document.querySelector('.tabs .on').dataset.t; }
+async function basculerNico(){
+  if(modeNico){ modeNico = false; majLock(); ongletActif() === 'actus' ? pageActus() : charger(); return; }
+  if(!await demanderCode()) return;
+  modeNico = true; majLock();
+  ongletActif() === 'actus' ? pageActus() : adminListe();
+}
+const bar = (t, racine) => racine ? `<h2>${t}</h2>` : `<div class="tb"><button class="prim sec ic" id="ret">${ICO.back}Retour</button></div><h2>${t}</h2>`;
 async function adminListe(){
   let l, cm;
   try{ [l, cm] = await Promise.all([rpc('seances_liste', {p_joueur: null, p_jours_arriere: 21}), rpc('equipes_du_jour').catch(() => ({}))]); }
@@ -334,7 +340,7 @@ async function adminListe(){
       <div class="hrs">${hh(s.debut)}–${hh(s.fin)}${jour ? '<span class="tag">Aujourd’hui</span>' : ''}</div>
       <div class="cnt">${pl(n.present,'présent','présents')}${pl(n.pas_sur,'pas sûr','pas sûrs')}${pl(n.absent,'absent','absents')}${pl(n.match,'match','matchs')}</div>
       ${bd.length ? `<div class="badges">${bd.join('')}</div>` : ''}
-      <div class="acts"><button class="prim sec ic" data-d="${s.id}">${ICO.next}Détails</button>${jour && !s.annulee ? `<button class="prim ic" data-e="${s.id}">${ICO.users}Équipes</button>` : ''}</div></div></article>`;
+      <div class="acts"><button class="prim sec ic" data-d="${s.id}">${ICO.next}Détails</button>${s.date >= j0 && !s.annulee ? `<button class="prim ic" data-e="${s.id}">${ICO.users}Équipes</button>` : ''}</div></div></article>`;
   };
   $('#app').innerHTML = bar('Mode Nico', true)
     + '<h3 class="sech">À venir</h3>' + (futur.length ? futur.map(carteA).join('') : '<div class="box mut">Aucune séance à venir.</div>')
@@ -345,8 +351,6 @@ async function adminListe(){
       <div class="dates"><input type="date" id="du" value="${j0}"><input type="date" id="au"></div>
       <button class="prim" id="gen">Créer les séances</button></div>
     <button class="prim sec ic" id="st">${ICO.chart}Voir l’assiduité</button>`;
-  $('#ret').onclick = charger;
-  $('#out').onclick = () => { code = null; store.del('code'); majLock(); charger(); };
   $('#st').onclick = adminStats;
   $('#gen').onclick = () => run(async () => {
     const du = $('#du').value, au = $('#au').value;
@@ -457,7 +461,7 @@ async function chargerActus(){ try{ actus = await rpc('actus_liste'); }catch(e){
 function marquerTab(t){ document.querySelectorAll('.tabs button').forEach(b => { const on = b.dataset.t === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); }
 function aller(t){
   marquerTab(t);
-  if(t === 'actus') pageActus(); else { moi ? charger() : choisir(); pastille(); }
+  if(t === 'actus') pageActus(); else { modeNico ? adminListe() : moi ? charger() : choisir(); pastille(); }
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => aller(b.dataset.t));
@@ -484,7 +488,7 @@ async function pageActus(){
   $('#app').innerHTML = '<p class="mut">Chargement…</p>';
   await chargerActus();
   store.set('actus_vu', String(maxA())); pastille();
-  const adm = !!code, A = $('#app'), aujd = ajd();
+  const adm = modeNico, A = $('#app'), aujd = ajd();
   const dom = u => { try{ return new URL(u).hostname.replace(/^www\./, '') }catch(e){ return u } };
   A.innerHTML = (adm ? `<div class="box"><b>Publier une actu</b>
       <input id="at" placeholder="Titre (ex. Tournoi mixte de Lunel)" maxlength="120" style="width:100%;margin-top:8px">
