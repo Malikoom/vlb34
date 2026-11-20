@@ -153,6 +153,19 @@ details.past>summary{cursor:pointer;color:var(--ink);font-weight:600;padding:10p
 .zone.pool{border:2px dashed var(--bd);border-radius:12px;min-height:56px;background:var(--card);margin-top:6px}
 details.autres{margin-top:10px}
 details.autres>summary{cursor:pointer;color:var(--ink);font-weight:600;padding:6px 0}
+.acc{margin-top:10px;border:1px solid var(--bd);border-radius:12px;background:var(--card);overflow:hidden;color:var(--txt);font-size:1rem}
+.acc>summary{display:flex;align-items:center;gap:8px;padding:11px 12px;cursor:pointer;list-style:none;font:700 1.05rem/1 var(--fd);letter-spacing:.05em;text-transform:uppercase;color:var(--txt)}
+.acc>summary::-webkit-details-marker,.ban.sum::-webkit-details-marker{display:none}
+.acc>summary::after{content:"";flex:none;width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin:-4px 4px 0 0}
+.acc[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+.acc .sm{margin-left:auto;font:600 .85rem var(--f);letter-spacing:0;text-transform:none;color:var(--mut)}
+.accb{padding:0 12px 12px}
+.aperobox details{margin:0;color:inherit;font-size:inherit}
+.ban.sum{position:relative;flex-direction:column;gap:4px;cursor:pointer;list-style:none;padding-right:34px}
+.ban.sum small{font:600 .78rem var(--f);letter-spacing:0;text-transform:none}
+.ban.sum::after{content:"";position:absolute;right:14px;top:50%;width:8px;height:8px;margin-top:-6px;border-right:2px solid #14203d;border-bottom:2px solid #14203d;transform:rotate(45deg)}
+details[open]>.ban.sum::after{transform:rotate(-135deg);margin-top:-2px}
+.chip.moi{background:var(--yel);color:#14203d;font-weight:800;box-shadow:0 0 0 2px #fff,0 2px 8px rgba(0,0,0,.45)}
 </style>
 </head>
 <body>
@@ -190,7 +203,10 @@ const EQ = ['Blocklieu','AceCules'];
 const LIB = {attente:'en attente', accepte:'accepté', refuse:'refusé'};
 const ajd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };   // date locale AAAA-MM-JJ
 const svg = p => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const etat = new Map();   // état ouvert/fermé des accordéons, conservé entre deux affichages
+const acc = (key, titre, resume, corps, defOpen) => `<details class="acc" data-k="${key}" ${(etat.has(key) ? etat.get(key) : defOpen) ? 'open' : ''}><summary><span>${titre}</span><span class="sm">${resume}</span></summary><div class="accb">${corps}</div></details>`;
 const ICO = {
+  dice: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/>'),
   lock: svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
   unlock: svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>'),
   back: svg('<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>'),
@@ -263,15 +279,16 @@ function terrainsHtml(eq, C, me){
   for(let t = 0; t < C; t++){
     const a = eq[2*t] || [], b = eq[2*t + 1] || [];
     if(!a.length && !b.length) continue;
-    const z = (L, cls, lab) => `<div class="zone st ${cls}"><div class="zl"><span>${lab}</span></div><div class="zc">${L.map(n => `<span class="chip ${n === me ? 'moi' : ''}">${esc(n)}</span>`).join('')}</div></div>`;
+    const z = (L, cls, lab) => `<div class="zone st ${cls}"><div class="zl"><span>${lab}</span></div><div class="zc">${L.map(n => `<span class="chip ${n === me ? 'moi' : ''}">${n === me ? '★ ' : ''}${esc(n)}</span>`).join('')}</div></div>`;
     h += `<div class="court"><div class="ch">Terrain ${t + 1}</div><div class="cb">${z(a, 'g', 'A')}<div class="net" title="Filet"></div>${z(b, 'd', 'B')}</div></div>`;
   }
   return h;
 }
+const resumeQui = s => { const c = k => s.participants.filter(p => p.statut === k).length; return `${c('present')} ✓ · ${c('pas_sur')} ? · ${c('match')} M · ${c('absent')} ✕`; };
 function equipesBloc(s){
   if(!s.compo || !s.compo.equipes) return '';
   const h = terrainsHtml(s.compo.equipes, s.compo.terrains, (joueurs.find(j => j.id === moi) || {}).prenom, false);
-  return h ? `<div class="eq"><h4>Équipes du jour</h4>${h}</div>` : '';
+  return h ? acc('e:' + s.id, 'Équipes du jour', '', h, true) : '';
 }
 function aperoBloc(s){
   const L = s.apero_liste;
@@ -287,7 +304,9 @@ function aperoBloc(s){
       : '<p class="mut">Personne pour l’instant.</p>')
       + (s.moi_apero === 'non' ? `<p class="mut" style="margin-top:8px">Tu as répondu non. <button class="lnk" data-ar="${s.id}">Finalement, je viens</button></p>` : '');
   }
-  return `<section class="aperobox"><div class="ban"><span aria-hidden="true">🍻</span>Apéro après la séance<span aria-hidden="true">🎉</span></div><div class="apbody">${corps}</div></section>`;
+  if(!s.moi_apero) return `<section class="aperobox"><div class="ban"><span aria-hidden="true">🍻</span>Apéro après la séance<span aria-hidden="true">🎉</span></div><div class="apbody">${corps}</div></section>`;
+  const key = 'a:' + s.id, nb = L.length;
+  return `<section class="aperobox"><details data-k="${key}" ${etat.get(key) ? 'open' : ''}><summary class="ban sum"><span>🍻 Apéro après la séance 🎉</span><small>${nb} partant${nb > 1 ? 's' : ''} · ${s.moi_apero === 'oui' ? 'tu viens' : 'tu ne viens pas'}</small></summary><div class="apbody">${corps}</div></details></section>`;
 }
 function carte(s){
   const n = s.nb || {present:0, pas_sur:0, absent:0, match:0, apero:0};
@@ -302,8 +321,8 @@ function carte(s){
     ${appel ? '<p class="alert">Tu as un match ce jour-là : pense à répondre « Match ».</p>' : ''}
     <div class="btns">${btns}</div></div>
     <div class="full">
+      ${acc('q:' + s.id, 'Qui vient ?', resumeQui(s), groupes(s), false)}
       ${equipesBloc(s)}
-      <div class="part"><h4>Qui vient ?</h4>${groupes(s)}</div>
       <details><summary>Demander d’inviter quelqu’un</summary>
         <div class="inv"><input placeholder="Prénom de l’invité" maxlength="40"><button class="prim" data-inv="${s.id}">Envoyer</button></div></details>
       ${mes}
@@ -313,8 +332,10 @@ function carte(s){
 function dessiner(){
   const A = $('#app');
   A.innerHTML = (seances.length ? seances.map(carte).join('') : '<div class="box mut">Aucune séance programmée pour le moment.</div>');
+  A.querySelectorAll('details[data-k]').forEach(d => d.ontoggle = () => etat.set(d.dataset.k, d.open));
   const act = (sel, f) => A.querySelectorAll(sel).forEach(b => b.onclick = () => f(b));
   const ap = (id, choix, apporte) => run(async () => {
+    if(choix) etat.set('a:' + id, true);   // reste ouvert après la réponse
     await rpc('repondre_apero', {p_seance: id, p_joueur: moi, p_choix: choix, p_apporte: apporte || null}); await maj();
   });
   act('[data-k]', b => {
@@ -400,7 +421,7 @@ async function adminEquipes(s){
   d.joueurs.filter(j => j.statut === 'pas_sur').forEach(j => lst.push({n: j.prenom, k: 'pas_sur'}));
   d.joueurs.filter(j => j.statut !== 'present' && j.statut !== 'pas_sur').forEach(j => lst.push({n: j.prenom, k: j.statut || 'none'}));
   const aff = lst.map(x => compo ? compo.equipes.findIndex(L => L.includes(x.n)) : -1);
-  let selI = -1, drag = null;
+  let selI = -1, drag = null, inclSurs = false;
   const placé = i => aff[i] >= 0 && aff[i] < 2 * C;
   const calc = () => { const eq = Array.from({length: 2 * C}, () => []); lst.forEach((x, i) => { if(placé(i)) eq[aff[i]].push(x.n); }); return eq; };
   const certains = lst.filter(x => x.k === 'present').length, surs = lst.filter(x => x.k === 'pas_sur').length;
@@ -424,6 +445,20 @@ async function adminEquipes(s){
     $('#hint').textContent = `${certains} présent${certains > 1 ? 's' : ''} (+${surs} pas sûr${surs > 1 ? 's' : ''}), ${nonPl} à placer.${conseil}`;
     $('#plateau').innerHTML = plateau();
   }
+  function aleatoire(){
+    // Place les joueurs non placés, un par un, dans l'équipe la moins remplie (au hasard en cas d'égalité) :
+    // l'écart entre deux équipes ne dépasse jamais 1 joueur.
+    const cnt = Array(2 * C).fill(0);
+    lst.forEach((x, i) => { if(placé(i)) cnt[aff[i]]++; });
+    const cand = lst.map((x, i) => i).filter(i => !placé(i) && (lst[i].k === 'present' || (inclSurs && lst[i].k === 'pas_sur')));
+    if(!cand.length){ toast('Personne à placer.'); return; }
+    for(let k = cand.length - 1; k > 0; k--){ const j = Math.floor(Math.random() * (k + 1)); [cand[k], cand[j]] = [cand[j], cand[k]]; }
+    cand.forEach(i => {
+      const m = Math.min(...cnt), ts = cnt.map((c, t) => c === m ? t : -1).filter(t => t >= 0);
+      const t = ts[Math.floor(Math.random() * ts.length)]; aff[i] = t; cnt[t]++;
+    });
+    selI = -1; majPlat(); toast(`${cand.length} joueur${cand.length > 1 ? 's' : ''} placé${cand.length > 1 ? 's' : ''}`);
+  }
   const zoneSous = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest('.zone:not(.st)'); };
   const surligner = z => { document.querySelectorAll('.zone.over').forEach(e => e.classList.remove('over')); if(z) z.classList.add('over'); };
   const finDrag = () => { if(drag && drag.ghost) drag.ghost.remove(); surligner(null); drag = null; };
@@ -433,6 +468,8 @@ async function adminEquipes(s){
       <div class="box"><label class="ck">Terrains
         <select id="nt">${[1, 2, 3].map(n => `<option value="${n}" ${n === C ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
         <p class="mut" id="hint"></p>
+        <label class="ck"><input type="checkbox" id="ps" ${inclSurs ? 'checked' : ''}>Inclure les pas sûr(e)</label>
+        <div class="acts"><button class="prim ic" id="rnd">${ICO.dice}Remplir aléatoirement</button><button class="prim sec" id="vid">Tout remettre à placer</button></div>
         <p class="mut" style="margin:0;font-size:.88rem">Fais glisser un joueur dans une moitié de terrain, ou touche-le puis touche la moitié voulue. Pour le retirer, dépose-le dans « À placer ».</p></div>
       <div id="plateau"></div>
       <div class="acts"><button class="prim ic" id="sv">Enregistrer</button><button class="prim sec" id="cl">Effacer les équipes</button></div>
@@ -441,6 +478,9 @@ async function adminEquipes(s){
     $('#nt').onchange = e => { C = +e.target.value; rendre(); };
     $('#sv').onclick = () => run(async () => { await rpc('admin_sauver_equipes', {p_code: code, p_seance: s.id, p_compo: {terrains: C, equipes: calc()}}); toast('Équipes enregistrées'); adminListe(); });
     $('#cl').onclick = () => { if(confirm('Effacer les équipes de cette séance ?')) run(async () => { await rpc('admin_sauver_equipes', {p_code: code, p_seance: s.id, p_compo: null}); adminListe(); }); };
+    $('#ps').onchange = e => { inclSurs = e.target.checked; };
+    $('#rnd').onclick = aleatoire;
+    $('#vid').onclick = () => { aff.fill(-1); selI = -1; majPlat(); };
     const pl = $('#plateau');
     pl.onpointerdown = e => {
       const c = e.target.closest('.chip'); if(!c) return;
@@ -522,7 +562,7 @@ async function adminStats(){
 }
 
 // ---------- Onglets et Actus ----------
-let actus = [], imgApercu = null;
+let actus = [], imgApercu = null, urlApercu = '', apercuP = null;
 const lien = t => esc(t).replace(/https?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
 const maxA = () => actus.length ? Math.max(...actus.map(a => +new Date(a.created_at))) : 0;
 function pastille(){
@@ -538,25 +578,34 @@ function aller(t){
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => aller(b.dataset.t));
 
-async function apercuLien(){
-  imgApercu = null; $('#pv').innerHTML = '';
+function apercuLien(){
   const u = $('#au').value.trim();
-  if(!/^https?:\/\//i.test(u)) return;
-  toast('Recherche de l’aperçu…');
-  try{
-    const r = await fetch('https://api.microlink.io/?url=' + encodeURIComponent(u));
-    const j = await r.json();
-    if(j.status !== 'success') throw new Error('indisponible');
-    const d = j.data;
-    if(d.title && !$('#at').value.trim()) $('#at').value = d.title.slice(0, 120);
-    if(d.description && !$('#ax').value.trim()) $('#ax').value = d.description.slice(0, 500);
-    imgApercu = d.image && /^https:\/\//i.test(d.image.url || '') ? d.image.url : null;
-    if(imgApercu) $('#pv').innerHTML = `<img src="${esc(imgApercu)}" alt="" onerror="this.remove()">`;
-    toast(imgApercu ? 'Aperçu récupéré' : 'Titre récupéré, pas d’image trouvée');
-  }catch(e){ toast('Aperçu indisponible : saisis le titre à la main.'); }
+  if(apercuP && u === urlApercu) return apercuP;   // déjà en cours ou déjà fait pour ce lien
+  urlApercu = u; imgApercu = null; apercuP = null;
+  const out = h => { const e = $('#pv'); if(e) e.innerHTML = h; };
+  out('');
+  if(!/^https?:\/\//i.test(u)) return Promise.resolve();
+  out('<p class="mut" style="margin:6px 0 0">Recherche de l’aperçu…</p>');
+  apercuP = (async () => {
+    try{
+      const r = await fetch('https://api.microlink.io/?url=' + encodeURIComponent(u));
+      const j = await r.json().catch(() => null);
+      if(!j || j.status !== 'success') throw new Error(r.status === 429 ? 'quota du jour atteint' : 'page illisible ou bloquée par le site');
+      const d = j.data;
+      if(d.title && $('#at') && !$('#at').value.trim()) $('#at').value = d.title.slice(0, 120);
+      if(d.description && $('#ax') && !$('#ax').value.trim()) $('#ax').value = d.description.slice(0, 500);
+      imgApercu = d.image && /^https:\/\//i.test(d.image.url || '') ? d.image.url : null;
+      out(imgApercu
+        ? `<img src="${esc(imgApercu)}" alt="" onerror="this.remove()"><p class="mut" style="margin:4px 0 0;font-size:.85rem">Aperçu récupéré : l’image sera publiée avec l’actu.</p>`
+        : '<p class="mut" style="margin:6px 0 0;font-size:.88rem">Aucune image trouvée pour ce lien (le site la bloque peut-être). L’actu sera publiée sans image.</p>');
+    }catch(e){
+      out(`<p style="color:var(--ko);margin:6px 0 0;font-size:.88rem">Aperçu indisponible (${esc(e.message)}). Tu peux publier sans image.</p>`);
+    }
+  })();
+  return apercuP;
 }
 async function pageActus(){
-  imgApercu = null;
+  imgApercu = null; urlApercu = ''; apercuP = null;
   $('#app').innerHTML = '<p class="mut">Chargement…</p>';
   await chargerActus();
   store.set('actus_vu', String(maxA())); pastille();
@@ -583,6 +632,7 @@ async function pageActus(){
   if(adm){
     $('#au').onchange = apercuLien;
     $('#pub').onclick = () => run(async () => {
+      if($('#au').value.trim()) await apercuLien();   // attend l’aperçu s’il est encore en cours
       const titre = $('#at').value.trim(); if(!titre) throw new Error('Il faut un titre.');
       await rpc('admin_publier_actu', {p_code: code, p_titre: titre, p_texte: $('#ax').value, p_url: $('#au').value.trim() || null, p_date: $('#ad').value || null, p_image: imgApercu, p_epingle: $('#ap').checked});
       toast('Actu publiée'); pageActus();
