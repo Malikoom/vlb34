@@ -79,11 +79,14 @@ textarea{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd)
 a.go{display:inline-block;margin-top:10px;text-decoration:none;color:#fff;max-width:100%;overflow-wrap:anywhere}
 .full{grid-column:1/-1}
 .part h4{font:700 1.05rem/1 var(--fd);letter-spacing:.05em;text-transform:uppercase;margin:6px 0 8px;color:var(--mut)}
-.pl{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
-.pu{position:relative;display:flex;align-items:center;gap:6px;padding:3px 11px 3px 4px;border-radius:999px;border:1px solid var(--bd);font-size:.92rem}
-.pu i{font-style:normal;font-weight:700;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:.78rem;color:#fff}
-.pu.ok i{background:var(--ok)}.pu.ps i{background:var(--yel);color:#14203d}.pu.ko i{background:var(--ko)}.pu.mt i{background:#173889;color:var(--yel)}
-.pu.mute{opacity:.6}
+.grp{display:grid;gap:8px}
+.gr{position:relative;display:grid;grid-template-columns:48px 1fr;border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.gi{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 0;color:#fff}
+.gi b{font:700 1.3rem/1 var(--fd)}
+.gi small{font-weight:600;font-size:.78rem;opacity:.9}
+.gr.ok .gi{background:var(--ok)}.gr.ps .gi{background:var(--yel);color:#14203d}.gr.ko .gi{background:var(--ko)}.gr.mt .gi{background:#173889;color:var(--yel)}
+.gr ul{list-style:none;margin:0;padding:9px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;font-size:.95rem}
+.gr.mute{opacity:.7}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .aperobox{margin-top:14px;border-radius:14px;overflow:hidden;border:2px solid var(--yel)}
 .ban{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;color:#14203d;font:700 1.35rem/1 var(--fd);letter-spacing:.05em;text-transform:uppercase;background:repeating-linear-gradient(-45deg,#edc406 0 14px,#f7d93f 14px 28px)}
@@ -181,8 +184,12 @@ async function charger(){
   $('#chg').onclick = () => { store.del('moi'); moi = null; choisir(); };
   await run(maj);
 }
-const IC = {present:['✓','ok','présent'], pas_sur:['?','ps','pas sûr(e)'], absent:['✕','ko','absent'], match:['M','mt','match']};
-const puce = p => { const [c, k, l] = IC[p.statut]; return `<li class="pu ${k} ${p.statut === 'absent' ? 'mute' : ''}"><i aria-hidden="true">${c}</i>${esc(p.prenom)}<span class="sr">, ${l}</span></li>`; };
+const GR = [['present','✓','ok','Présents'], ['pas_sur','?','ps','Pas sûr(e)'], ['match','M','mt','Match'], ['absent','✕','ko','Absents']];
+function groupes(s){
+  const g = GR.map(([k,c,cl,l]) => ({k, c, cl, l, L: s.participants.filter(p => p.statut === k)})).filter(x => x.L.length);
+  if(!g.length) return '<p class="mut">Personne n’a encore répondu.</p>';
+  return `<div class="grp">${g.map(x => `<div class="gr ${x.cl} ${x.k === 'absent' ? 'mute' : ''}"><div class="gi" aria-hidden="true"><b>${x.c}</b><small>${x.L.length}</small></div><span class="sr">${x.l} : </span><ul>${x.L.map(p => `<li>${esc(p.prenom)}</li>`).join('')}</ul></div>`).join('')}</div>`;
+}
 function aperoBloc(s){
   const L = s.apero_liste;
   let corps;
@@ -212,7 +219,7 @@ function carte(s){
     ${appel ? '<p class="alert">Tu as un match ce jour-là : pense à répondre « Match ».</p>' : ''}
     <div class="btns">${btns}</div></div>
     <div class="full">
-      <div class="part"><h4>Qui vient ?</h4>${s.participants.length ? `<ul class="pl">${s.participants.map(puce).join('')}</ul>` : '<p class="mut">Personne n’a encore répondu.</p>'}</div>
+      <div class="part"><h4>Qui vient ?</h4>${groupes(s)}</div>
       <details><summary>Demander d’inviter quelqu’un</summary>
         <div class="inv"><input placeholder="Prénom de l’invité" maxlength="40"><button class="prim" data-inv="${s.id}">Envoyer</button></div></details>
       ${mes}
