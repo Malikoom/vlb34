@@ -144,9 +144,7 @@ details.past>summary{cursor:pointer;color:var(--ink);font-weight:600;padding:10p
 .cb .zone.d .zl{justify-content:flex-end}
 .zl b{font:700 .78rem/1 var(--f);padding:2px 7px;border-radius:999px;background:#fff}
 .zl b.ok{color:var(--ok)}.zl b.warn{color:var(--mt)}
-.zc{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
-.cb .zone.d .zc{align-items:flex-end}
-.zc.row{flex-direction:row;flex-wrap:wrap;align-items:center}
+.zc{display:flex;flex-direction:row;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:5px}
 .chip{display:inline-block;max-width:100%;background:#fff;color:#14203d;border-radius:999px;padding:5px 11px;font-size:.88rem;font-weight:600;overflow-wrap:anywhere;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.35)}
 .chip.k-pas_sur{box-shadow:0 0 0 2px var(--yel)}
 .chip.k-none,.chip.k-absent,.chip.k-match{box-shadow:0 0 0 1px #8a93ab;opacity:.85}
@@ -154,7 +152,6 @@ details.past>summary{cursor:pointer;color:var(--ink);font-weight:600;padding:10p
 .chip.dragging{opacity:.3}
 .chip.ghost{position:fixed;pointer-events:none;z-index:50;transform:translate(-50%,-140%);box-shadow:0 8px 18px rgba(0,0,0,.45);opacity:1}
 .zone.st .chip{cursor:default;touch-action:auto}
-.chip.moi{background:var(--yel)}
 .zone.pool{border:2px dashed var(--bd);border-radius:12px;min-height:56px;background:var(--card);margin-top:6px}
 details.autres{margin-top:10px}
 details.autres>summary{cursor:pointer;color:var(--ink);font-weight:600;padding:6px 0}
@@ -170,7 +167,8 @@ details.autres>summary{cursor:pointer;color:var(--ink);font-weight:600;padding:6
 .ban.sum small{font:600 .78rem var(--f);letter-spacing:0;text-transform:none}
 .ban.sum::after{content:"";position:absolute;right:14px;top:50%;width:8px;height:8px;margin-top:-6px;border-right:2px solid #14203d;border-bottom:2px solid #14203d;transform:rotate(45deg)}
 details[open]>.ban.sum::after{transform:rotate(-135deg);margin-top:-2px}
-.chip.moi{background:var(--yel);color:#14203d;font-weight:800;box-shadow:0 0 0 2px #fff,0 2px 8px rgba(0,0,0,.45)}
+.chip.moi{background:var(--yel);color:#14203d}
+.inviter{margin-top:12px}
 </style>
 </head>
 <body>
@@ -279,13 +277,14 @@ function groupes(s){
   if(!g.length) return '<p class="mut">Personne n’a encore répondu.</p>';
   return `<div class="grp">${g.map(x => `<div class="gr ${x.cl} ${x.k === 'absent' ? 'mute' : ''}"><div class="gi" aria-hidden="true"><b>${x.c}</b><small>${x.L.length}</small></div><span class="sr">${x.l} : </span><ul>${x.L.map(p => `<li>${esc(p.prenom)}</li>`).join('')}</ul></div>`).join('')}</div>`;
 }
+const NOM = t => String.fromCharCode(65 + t);   // équipes A, B, C, D, E, F
 function terrainsHtml(eq, C, me){
   let h = '';
   for(let t = 0; t < C; t++){
     const a = eq[2*t] || [], b = eq[2*t + 1] || [];
     if(!a.length && !b.length) continue;
-    const z = (L, cls, lab) => `<div class="zone st ${cls}"><div class="zl"><span>${lab}</span></div><div class="zc">${L.map(n => `<span class="chip ${n === me ? 'moi' : ''}">${n === me ? '★ ' : ''}${esc(n)}</span>`).join('')}</div></div>`;
-    h += `<div class="court"><div class="ch">Terrain ${t + 1}</div><div class="cb">${z(a, 'g', 'A')}<div class="net" title="Filet"></div>${z(b, 'd', 'B')}</div></div>`;
+    const z = (L, cls, lab) => `<div class="zone st ${cls}"><div class="zl"><span>${lab}</span></div><div class="zc">${L.map(n => `<span class="chip ${n === me ? 'moi' : ''}">${esc(n)}</span>`).join('')}</div></div>`;
+    h += `<div class="court"><div class="ch">Terrain ${t + 1}</div><div class="cb">${z(a, 'g', NOM(2 * t))}<div class="net" title="Filet"></div>${z(b, 'd', NOM(2 * t + 1))}</div></div>`;
   }
   return h;
 }
@@ -293,7 +292,7 @@ const resumeQui = s => { const c = k => s.participants.filter(p => p.statut === 
 function equipesBloc(s){
   if(!s.compo || !s.compo.equipes) return '';
   const h = terrainsHtml(s.compo.equipes, s.compo.terrains, (joueurs.find(j => j.id === moi) || {}).prenom, false);
-  return h ? acc('e:' + s.id, 'Équipes du jour', '', h, true) : '';
+  return h ? acc('e:' + s.id, 'Équipes du jour', '', h, false) : '';
 }
 function aperoBloc(s){
   const L = s.apero_liste;
@@ -313,6 +312,11 @@ function aperoBloc(s){
   const key = 'a:' + s.id, nb = L.length;
   return `<section class="aperobox"><details data-acc="${key}" ${etat.get(key) ? 'open' : ''}><summary class="ban sum"><span>🍻 Apéro après la séance 🎉</span><small>${nb} partant${nb > 1 ? 's' : ''} · ${s.moi_apero === 'oui' ? 'tu viens' : 'tu ne viens pas'}</small></summary><div class="apbody">${corps}</div></details></section>`;
 }
+function inviteBloc(s){
+  const mes = s.mes_invites.length ? `<ul class="mes">${s.mes_invites.map(i => `<li>${esc(i.prenom)} : <span class="${i.statut}">${LIB[i.statut]}</span></li>`).join('')}</ul>` : '';
+  return `<details class="inviter"><summary>Demander d’inviter quelqu’un</summary>
+    <div class="inv"><input placeholder="Prénom de l’invité" maxlength="40"><button class="prim" data-inv="${s.id}">Envoyer</button></div></details>${mes}`;
+}
 function carte(s){
   const n = s.nb || {present:0, pas_sur:0, absent:0, match:0, apero:0};
   const note = s.note ? `<p class="mut">${esc(s.note)}</p>` : '';
@@ -320,17 +324,13 @@ function carte(s){
   if(s.annulee) return `<article class="card off">${bloc(s.date)}<div>${hrs}<p class="mut">Séance annulée</p>${note}</div></article>`;
   const appel = s.mon_match && s.moi !== 'match';
   const btns = ST.map(([k,l]) => `<button class="${k} ${s.moi === k ? 'on' : ''} ${k === 'match' && appel ? 'call' : ''}" data-s="${s.id}" data-k="${k}" aria-pressed="${s.moi === k}">${l}</button>`).join('');
-  const mes = s.mes_invites.length ? `<ul class="mes">${s.mes_invites.map(i => `<li>${esc(i.prenom)} : <span class="${i.statut}">${LIB[i.statut]}</span></li>`).join('')}</ul>` : '';
   return `<article class="card">${bloc(s.date)}<div>${hrs}
     <div class="cnt">${pl(n.present,'présent','présents')}${pl(n.pas_sur,'pas sûr','pas sûrs')}${pl(n.absent,'absent','absents')}${pl(n.match,'match','matchs')}${s.nb_invites ? pl(s.nb_invites,'invité','invités') : ''}</div>
     ${appel ? '<p class="alert">Tu as un match ce jour-là : pense à répondre « Match ».</p>' : ''}
     <div class="btns">${btns}</div></div>
     <div class="full">
-      ${acc('q:' + s.id, 'Qui vient ?', resumeQui(s), groupes(s), false)}
+      ${acc('q:' + s.id, 'Qui vient ?', resumeQui(s), groupes(s) + inviteBloc(s), false)}
       ${equipesBloc(s)}
-      <details><summary>Demander d’inviter quelqu’un</summary>
-        <div class="inv"><input placeholder="Prénom de l’invité" maxlength="40"><button class="prim" data-inv="${s.id}">Envoyer</button></div></details>
-      ${mes}
       ${s.apero ? aperoBloc(s) : ''}
       ${note}</div></article>`;
 }
@@ -433,7 +433,7 @@ async function adminEquipes(s){
   const chip = i => `<div class="chip k-${lst[i].k} ${selI === i ? 'sel' : ''}" data-i="${i}" role="button" tabindex="0" aria-pressed="${selI === i}">${lst[i].k === 'pas_sur' ? '? ' : ''}${esc(lst[i].n)}</div>`;
   const zone = (t, cls) => {
     const L = lst.map((x, i) => i).filter(i => aff[i] === t), ok = L.length >= 4 && L.length <= 6;
-    return `<div class="zone ${cls}" data-t="${t}"><div class="zl"><span>${t % 2 ? 'B' : 'A'}</span><b class="${ok ? 'ok' : 'warn'}">${L.length}</b></div><div class="zc">${L.map(chip).join('')}</div></div>`;
+    return `<div class="zone ${cls}" data-t="${t}"><div class="zl"><span>${NOM(t)}</span><b class="${ok ? 'ok' : 'warn'}">${L.length}</b></div><div class="zc">${L.map(chip).join('')}</div></div>`;
   };
   function plateau(){
     let h = '';
