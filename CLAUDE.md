@@ -18,12 +18,19 @@ Séances : mardi 12h-14h et jeudi 20h-22h, toujours au même lieu. Coach : Nico.
 - La clé `sb_publishable_…` dans `index.html` est publique par conception. Ne jamais mettre de clé `service_role`/secrète dans le dépôt, ni le code admin, ni les niveaux des joueurs.
 
 ## Base de données
-Tables : `joueurs` (prenom, equipe Blocklieu/AceCules/null, actif), `niveaux` (confidentiel, jamais renvoyé par une fonction publique), `seances` (date, debut, fin, annulee, note, apero, equipes_match, composition jsonb), `reponses` (statut present/pas_sur/absent/match, apero_choix oui/non, apero_apporte), `presences` (présence réelle saisie par Nico), `invites` (attente/accepte/refuse), `actus` (titre, texte, url, image, date_evenement, epingle), `reglages`.
+Tables : `joueurs` (prenom, equipe Blocklieu/AceCules/null, actif), `profils` (joueur_id, niveau 1-4, genre 1/2, passeur 0/1/2 : CONFIDENTIEL, lu uniquement par l'Edge Function), `seances` (date, debut, fin, annulee, note, apero, equipes_match, composition jsonb), `reponses` (statut present/pas_sur/absent/match, apero_choix oui/non, apero_apporte), `presences` (présence réelle saisie par Nico), `invites` (attente/accepte/refuse), `actus` (titre, texte, url, image, date_evenement, epingle), `reglages`.
 
 Migrations à lancer dans cet ordre dans Supabase > SQL Editor (vérifier lesquelles sont déjà passées) :
 `schema.sql`, `migration_v2.sql`, `migration_v3_actus.sql`, `migration_v4_actus_liens.sql`, `migration_v5_actus_image.sql`, `migration_v6_apero.sql`, `migration_v7_equipes.sql`.
 Quand une migration remplace une fonction RPC, pousser `index.html` seulement après l'avoir lancée.
-Ces fichiers SQL vont dans un dossier `sql/` du dépôt (ils ne contiennent aucun secret).
+Ces fichiers SQL sont dans `migrations/` (aucun secret). Le script d'import des profils (niveaux réels) n'est JAMAIS dans le dépôt.
+
+## Edge Function `equipes` (supabase/functions/equipes)
+- `moteur.ts` : moteur pur (tests : `node --experimental-strip-types --test supabase/functions/equipes/moteur.test.ts`, données synthétiques uniquement). `index.ts` : service Deno, actions `brouillon` (Nico, code admin, rien d'enregistré) et `auto` (joueur « Présent », seulement pendant la séance à l'heure de Paris, sans composition existante, écriture atomique `composition is null`, verrouillée).
+- Déployée avec `verify_jwt = false` (`supabase/config.toml`) car la clé publique n'est pas un JWT ; elle contrôle elle-même l'accès. Utilise `SUPABASE_SERVICE_ROLE_KEY` (variable d'environnement de la fonction, jamais dans le dépôt).
+- Les niveaux ne sortent jamais du serveur : la réponse ne contient que des noms et des avertissements génériques.
+- Règles : équipes de 4 à 6 (3 si besoin), 2 équipes par terrain ; terrains = plus petit nombre ≤ max (mardi 1 ; jeudi 3, ou 2 si match) gardant ≤ 6 par équipe ; mode équilibré = un passeur par équipe, faibles et genres répartis, jamais 2 débutants ensemble ; mode compétition = terrain 1 Blocklieu contre AceCules à 4, groupe incomplet complété par des joueurs sans club.
+- Quota gratuit ~500 000 appels/mois (à vérifier dans le tableau de bord Supabase).
 
 ## Fonctionnalités en place
 - Onglets **Entraînements** et **Actus** sous le header « Volley Loisir Beaulieu » (logo `logo.jpg` à côté d'`index.html`).
@@ -35,7 +42,7 @@ Ces fichiers SQL vont dans un dossier `sql/` du dépôt (ils ne contiennent aucu
 - Actus : titre, lien, date d'événement, texte, épinglage ; aperçu du lien (titre + image) via Microlink (gratuit, 25 requêtes/jour, bloqué par Facebook/Instagram).
 
 ## Pistes à venir
-- Équipes équilibrées selon le niveau (la table `niveaux` est prête, le niveau ne doit jamais être affiché).
+- Affinités / incompatibilités entre joueurs, bouton « Je suis arrivé » pour les retardataires.
 - Mini-tournois, notifications (PWA), message WhatsApp prérempli pour Nico (`wa.me`), job GitHub Actions `keepalive.yml` contre la mise en pause de Supabase.
 - WhatsApp : aucun envoi automatique dans le groupe existant n'est possible gratuitement ; seuls les liens `wa.me` préremplis fonctionnent.
 

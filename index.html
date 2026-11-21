@@ -231,6 +231,14 @@ async function rpc(fn, args){
   if(!r.ok) throw new Error((j && j.message) || 'Erreur réseau');
   return j;
 }
+async function edge(body){
+  const r = await fetch(`${URL_API}/functions/v1/equipes`, {
+    method:'POST', headers:{apikey:CLE,'Content-Type':'application/json'}, body:JSON.stringify(body)
+  });
+  const j = await r.json().catch(() => null);
+  if(!r.ok) throw new Error((j && (j.erreur || j.message)) || 'Erreur réseau');
+  return j;
+}
 function toast(m){ const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 3000); }
 async function run(f){ try{ await f() }catch(e){ toast(e.message) } }
 
@@ -265,6 +273,12 @@ async function maj(){
   const [l, cm] = await Promise.all([rpc('seances_liste', {p_joueur: moi, p_jours_arriere: 0}), rpc('equipes_du_jour').catch(() => ({}))]);
   seances = l; seances.forEach(s => s.compo = cm[s.id] || null); dessiner();
 }
+setInterval(() => {
+  const a = document.activeElement;
+  if(!moi || modeNico || document.hidden || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) return;
+  if(ongletActif() !== 'entr' || !seances.some(enCours)) return;
+  maj().catch(() => {});
+}, 30000);
 async function charger(){
   const p = joueurs.find(j => j.id === moi);
   $('#who').innerHTML = `Salut ${esc(p.prenom)} · <button id="chg">changer</button>`;
@@ -289,10 +303,27 @@ function terrainsHtml(eq, C, me){
   return h;
 }
 const resumeQui = s => { const c = k => s.participants.filter(p => p.statut === k).length; return `${c('present')} ✓ · ${c('pas_sur')} ? · ${c('match')} M · ${c('absent')} ✕`; };
+// Date et minutes à Paris (même règle que le serveur)
+function parisMaintenant(){
+  const p = Object.fromEntries(new Intl.DateTimeFormat('fr-CA', {timeZone:'Europe/Paris', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23'})
+    .formatToParts(new Date()).map(x => [x.type, x.value]));
+  return {date: `${p.year}-${p.month}-${p.day}`, min: +p.hour * 60 + +p.minute};
+}
+const minutes = h => { const [a, b] = h.split(':'); return +a * 60 + +b; };
+const enCours = s => { const n = parisMaintenant(); return s.date === n.date && n.min >= minutes(s.debut) && n.min < minutes(s.fin); };
 function equipesBloc(s){
-  if(!s.compo || !s.compo.equipes) return '';
-  const h = terrainsHtml(s.compo.equipes, s.compo.terrains, (joueurs.find(j => j.id === moi) || {}).prenom, false);
-  return h ? acc('e:' + s.id, 'Équipes du jour', '', h, false) : '';
+  if(!s.compo || !s.compo.equipes){
+    // Pas d'équipes : un joueur « Présent » peut les générer une fois la séance commencée
+    if(s.moi !== 'present' || s.annulee || !enCours(s)) return '';
+    return `<section class="box"><p class="mut" style="margin:0 0 8px">Les équipes n’ont pas encore été composées.</p>
+      <button class="prim" data-gen="${s.id}">Générer les équipes</button></section>`;
+  }
+  const me = (joueurs.find(j => j.id === moi) || {}).prenom;
+  let h = terrainsHtml(s.compo.equipes, s.compo.terrains, me);
+  if(!h) return '';
+  if(s.compo.remplacants && s.compo.remplacants.length) h += `<p class="mut">Remplaçants : ${s.compo.remplacants.map(esc).join(', ')}</p>`;
+  if(s.compo.auto) h += '<p class="mut"><i>Équipes générées automatiquement</i></p>';
+  return acc('e:' + s.id, 'Équipes du jour', '', h, false);
 }
 function aperoBloc(s){
   const L = s.apero_liste;
@@ -346,6 +377,10 @@ function dessiner(){
   act('button[data-k]', b => {
     const s = seances.find(x => x.id === b.dataset.s);
     run(async () => { await rpc('repondre', {p_seance: s.id, p_joueur: moi, p_statut: s.moi === b.dataset.k ? '' : b.dataset.k}); await maj(); });
+  });
+  act('[data-gen]', b => {
+    if(!confirm('Générer les équipes maintenant ? Le résultat sera définitif (seul Nico pourra le modifier).')) return;
+    run(async () => { b.disabled = true; etat.set('e:' + b.dataset.gen, true); const r = await edge({action: 'auto', seance: b.dataset.gen, joueur: moi}); toast(r.deja ? 'Les équipes existaient déjà' : 'Équipes générées'); await maj(); });
   });
   act('[data-ao]', b => { const f = b.closest('.aperobox').querySelector('.apf'); f.hidden = false; f.querySelector('input').focus(); });
   act('[data-an]', b => ap(b.dataset.an, 'non'));
@@ -426,7 +461,7 @@ async function adminEquipes(s){
   d.joueurs.filter(j => j.statut === 'pas_sur').forEach(j => lst.push({n: j.prenom, k: 'pas_sur'}));
   d.joueurs.filter(j => j.statut !== 'present' && j.statut !== 'pas_sur').forEach(j => lst.push({n: j.prenom, k: j.statut || 'none'}));
   const aff = lst.map(x => compo ? compo.equipes.findIndex(L => L.includes(x.n)) : -1);
-  let selI = -1, drag = null, inclSurs = false;
+  let selI = -1, drag = null, inclSurs = false, mode = 'aleatoire', avert = [];
   const placé = i => aff[i] >= 0 && aff[i] < 2 * C;
   const calc = () => { const eq = Array.from({length: 2 * C}, () => []); lst.forEach((x, i) => { if(placé(i)) eq[aff[i]].push(x.n); }); return eq; };
   const certains = lst.filter(x => x.k === 'present').length, surs = lst.filter(x => x.k === 'pas_sur').length;
@@ -447,6 +482,7 @@ async function adminEquipes(s){
   function majPlat(){
     const nonPl = lst.filter((x, i) => x.k === 'present' && !placé(i)).length, moy = certains / (2 * C);
     const conseil = !certains ? '' : moy < 4 ? ` Peu de joueurs pour ${C} terrain${C > 1 ? 's' : ''} (environ ${moy.toFixed(1)} par équipe).` : moy > 6 ? ` Beaucoup de joueurs pour ${C} terrain${C > 1 ? 's' : ''} (environ ${moy.toFixed(1)} par équipe).` : '';
+    $('#av').innerHTML = avert.map(a => `<p class="alert" style="margin:6px 0">${esc(a)}</p>`).join('');
     $('#hint').textContent = `${certains} présent${certains > 1 ? 's' : ''} (+${surs} pas sûr${surs > 1 ? 's' : ''}), ${nonPl} à placer.${conseil}`;
     $('#plateau').innerHTML = plateau();
   }
@@ -464,6 +500,17 @@ async function adminEquipes(s){
     });
     selI = -1; majPlat(); toast(`${cand.length} joueur${cand.length > 1 ? 's' : ''} placé${cand.length > 1 ? 's' : ''}`);
   }
+  async function generer(){
+    // Le serveur applique les niveaux (confidentiels) : on garde les joueurs déjà placés et on reçoit des noms.
+    const fixes = {}; lst.forEach((x, i) => { if(placé(i)) fixes[x.n] = aff[i]; });
+    const b = $('#rnd'); b.disabled = true;
+    try{
+      const r = await edge({action: 'brouillon', code, seance: s.id, mode, terrains: C, fixes, inclurePasSur: inclSurs});
+      lst.forEach((x, i) => { if(!(x.n in fixes)){ const t = r.equipes.findIndex(L => L.includes(x.n)); aff[i] = t; } });
+      avert = r.avertissements || []; selI = -1; majPlat();
+      toast('Proposition générée : à toi d’ajuster puis d’enregistrer');
+    } finally { b.disabled = false; }
+  }
   const zoneSous = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest('.zone:not(.st)'); };
   const surligner = z => { document.querySelectorAll('.zone.over').forEach(e => e.classList.remove('over')); if(z) z.classList.add('over'); };
   const finDrag = () => { if(drag && drag.ghost) drag.ghost.remove(); surligner(null); drag = null; };
@@ -472,9 +519,11 @@ async function adminEquipes(s){
     $('#app').innerHTML = bar(`Équipes · ${fmt(s.date)}`) + `
       <div class="box"><label class="ck">Terrains
         <select id="nt">${[1, 2, 3].map(n => `<option value="${n}" ${n === C ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-        <p class="mut" id="hint"></p>
+        <p class="mut" id="hint"></p><div id="av"></div>
         <label class="ck"><input type="checkbox" id="ps" ${inclSurs ? 'checked' : ''}>Inclure les pas sûr(e)</label>
-        <div class="acts"><button class="prim ic" id="rnd">${ICO.dice}Remplir aléatoirement</button><button class="prim sec" id="vid">Tout remettre à placer</button></div>
+        <label class="ck">Mode
+          <select id="md">${[['aleatoire','Aléatoire'], ['equilibre','Équilibré'], ['competition','Compétition']].map(([k, l]) => `<option value="${k}" ${k === mode ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <div class="acts"><button class="prim ic" id="rnd">${ICO.dice}Générer</button><button class="prim sec" id="vid">Tout remettre à placer</button></div>
         <p class="mut" style="margin:0;font-size:.88rem">Fais glisser un joueur dans une moitié de terrain, ou touche-le puis touche la moitié voulue. Pour le retirer, dépose-le dans « À placer ».</p></div>
       <div id="plateau"></div>
       <div class="acts"><button class="prim ic" id="sv">Enregistrer</button><button class="prim sec" id="cl">Effacer les équipes</button></div>
@@ -484,7 +533,8 @@ async function adminEquipes(s){
     $('#sv').onclick = () => run(async () => { await rpc('admin_sauver_equipes', {p_code: code, p_seance: s.id, p_compo: {terrains: C, equipes: calc()}}); toast('Équipes enregistrées'); adminListe(); });
     $('#cl').onclick = () => { if(confirm('Effacer les équipes de cette séance ?')) run(async () => { await rpc('admin_sauver_equipes', {p_code: code, p_seance: s.id, p_compo: null}); adminListe(); }); };
     $('#ps').onchange = e => { inclSurs = e.target.checked; };
-    $('#rnd').onclick = aleatoire;
+    $('#md').onchange = e => { mode = e.target.value; };
+    $('#rnd').onclick = () => mode === 'aleatoire' ? (avert = [], aleatoire()) : run(generer);
     $('#vid').onclick = () => { aff.fill(-1); selI = -1; majPlat(); };
     const pl = $('#plateau');
     pl.onpointerdown = e => {

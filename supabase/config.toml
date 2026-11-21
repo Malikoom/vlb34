@@ -1,0 +1,6 @@
+project_id = "qbrbqvaebopuqspidzyn"
+
+# La clé publique « sb_publishable_… » n'est pas un JWT : la vérification JWT est désactivée.
+# La fonction contrôle elle-même ses accès (code admin ou règles de séance).
+[functions.equipes]
+verify_jwt = false
